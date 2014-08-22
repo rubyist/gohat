@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 )
 
 var dumpHeader = "go1.3 heap dump\n"
@@ -13,11 +14,12 @@ var typeList map[uint64]*Type
 var objectList map[uint64]*Object
 
 type HeapFile struct {
-	File string
+	File     string
+	memStats *runtime.MemStats
 }
 
 func NewHeapFile(file string) (*HeapFile, error) {
-	return &HeapFile{file}, nil
+	return &HeapFile{File: file}, nil
 }
 
 func (h *HeapFile) parse(contentObj uint64) {
@@ -72,7 +74,7 @@ func (h *HeapFile) parse(contentObj uint64) {
 		case 9:
 			readOSThread(byteReader)
 		case 10:
-			readMemStats(byteReader)
+			h.memStats = readMemStats(byteReader)
 		case 11:
 			readQueuedFinalizer(byteReader)
 		case 12:
@@ -94,9 +96,6 @@ func (h *HeapFile) parse(contentObj uint64) {
 	}
 }
 
-// Read through, when we get a kind, return a struct of kind/byte data
-// Then the caller can know how to assemble that byte data
-
 func (h *HeapFile) Objects() []*Object {
 	objects := make([]*Object, len(objectList))
 	h.parse(0)
@@ -112,6 +111,11 @@ func (h *HeapFile) Object(addr int64) *Object {
 		return object
 	}
 	return nil
+}
+
+func (h *HeapFile) MemStats() *runtime.MemStats {
+	h.parse(0)
+	return h.memStats
 }
 
 // (1) object: uvarint uvarint uvarint string
@@ -230,10 +234,37 @@ func readOSThread(r io.ByteReader) {
 }
 
 // (10) memstats
-func readMemStats(r io.ByteReader) {
-	for i := 0; i < 281; i++ {
-		readUvarint(r)
+func readMemStats(r io.ByteReader) *runtime.MemStats {
+	var memStats runtime.MemStats
+	memStats.Alloc = readUvarint(r)        // bytes allocated and still in use
+	memStats.TotalAlloc = readUvarint(r)   // bytes allocated (even if freed)
+	memStats.Sys = readUvarint(r)          // bytes obtained from system (sum of XxxSys below)
+	memStats.Lookups = readUvarint(r)      // number of pointer lookups
+	memStats.Mallocs = readUvarint(r)      // number of mallocs
+	memStats.Frees = readUvarint(r)        // number of frees
+	memStats.HeapAlloc = readUvarint(r)    // bytes allocated and still in use
+	memStats.HeapSys = readUvarint(r)      // bytes obtained from system
+	memStats.HeapIdle = readUvarint(r)     // bytes in idle spans
+	memStats.HeapInuse = readUvarint(r)    // bytes in non-idle span
+	memStats.HeapReleased = readUvarint(r) // bytes released to the OS
+	memStats.HeapObjects = readUvarint(r)  // total number of allocated objects
+	memStats.StackInuse = readUvarint(r)   // bootstrap stacks
+	memStats.StackSys = readUvarint(r)
+	memStats.MSpanInuse = readUvarint(r) // mspan structures
+	memStats.MSpanSys = readUvarint(r)
+	memStats.MCacheInuse = readUvarint(r) // mcache structures
+	memStats.MCacheSys = readUvarint(r)
+	memStats.BuckHashSys = readUvarint(r) // profiling bucket hash table
+	memStats.GCSys = readUvarint(r)       // GC metadata
+	memStats.OtherSys = readUvarint(r)    // other system allocations
+	memStats.NextGC = readUvarint(r)      // next run in HeapAlloc time (bytes)
+	memStats.LastGC = readUvarint(r)      // last run in absolute time (ns)
+	memStats.PauseTotalNs = readUvarint(r)
+	for i := 0; i < 256; i++ {
+		memStats.PauseNs[i] = readUvarint(r)
 	}
+	memStats.NumGC = uint32(readUvarint(r))
+	return &memStats
 }
 
 // (11) queued finalizer

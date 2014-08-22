@@ -54,5 +54,20 @@ Complete documentation is available at http://github.com/rubyist/heaputil`,
 	}
 	heapUtilCmd.AddCommand(objectCommand)
 
+	var memStatsCommand = &cobra.Command{
+		Use:   "memstats",
+		Short: "Dump the memstats",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 1 {
+				fmt.Println("memstats <heap file>")
+				os.Exit(1)
+			}
+			heapFile, _ := NewHeapFile(args[0])
+			memstats := heapFile.MemStats()
+			fmt.Println(memstats)
+		},
+	}
+	heapUtilCmd.AddCommand(memStatsCommand)
+
 	heapUtilCmd.Execute()
 }
