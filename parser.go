@@ -10,6 +10,7 @@ import (
 
 var dumpHeader = "go1.3 heap dump\n"
 var typeList map[uint64]*Type
+var objectList map[uint64]*Object
 
 type HeapFile struct {
 	File string
@@ -19,9 +20,9 @@ func NewHeapFile(file string) (*HeapFile, error) {
 	return &HeapFile{file}, nil
 }
 
-func (h *HeapFile) parse(filter int) []interface{} {
-	items := make([]interface{}, 0)
+func (h *HeapFile) parse(contentObj uint64) {
 	typeList = make(map[uint64]*Type, 0)
+	objectList = make(map[uint64]*Object, 0)
 
 	dumpFile, err := os.Open(h.File)
 	if err != nil {
@@ -49,12 +50,10 @@ func (h *HeapFile) parse(filter int) []interface{} {
 
 		switch kind {
 		case 0:
-			return items
+			return
 		case 1:
-			item := readObject(byteReader)
-			if filter == 1 {
-				items = append(items, item)
-			}
+			o := readObject(byteReader, contentObj)
+			objectList[o.Address] = o
 		case 2:
 			readOtherRoot(byteReader)
 		case 3:
@@ -99,39 +98,44 @@ func (h *HeapFile) parse(filter int) []interface{} {
 // Then the caller can know how to assemble that byte data
 
 func (h *HeapFile) Objects() []*Object {
-	objects := make([]*Object, 0)
-	items := h.parse(1)
-	for _, item := range items {
-		objects = append(objects, item.(*Object))
+	objects := make([]*Object, len(objectList))
+	h.parse(0)
+	for _, v := range objectList {
+		objects = append(objects, v)
 	}
 	return objects
 }
 
-type item struct {
-	Kind int
-	Data []byte
+func (h *HeapFile) Object(addr int64) *Object {
+	h.parse(uint64(addr))
+	if object, ok := objectList[uint64(addr)]; ok {
+		return object
+	}
+	return nil
 }
 
 // (1) object: uvarint uvarint uvarint string
 type Object struct {
 	Address     uint64
 	TypeAddress uint64
-	TypeName    string
 	Kind        uint64
 	Content     string
 	Size        int
+	Type        *Type
 }
 
-func readObject(r io.ByteReader) *Object {
+func readObject(r io.ByteReader, contentObj uint64) *Object {
 	o := &Object{}
 	o.Address = readUvarint(r)     // address of object
 	o.TypeAddress = readUvarint(r) // address of type descriptor (or 0 if unknown)
 	o.Kind = readUvarint(r)        // kind of object (0=regular 1=array 2=channel 127=conservatively scanned)
 	content := readString(r)       // contents of object (discard?)
 	o.Size = len(content)
-	o.TypeName = "<unknown>"
 	if o.TypeAddress != 0 {
-		o.TypeName = typeList[o.TypeAddress].Name
+		o.Type = typeList[o.TypeAddress]
+	}
+	if contentObj == o.Address {
+		o.Content = content
 	}
 	return o
 }

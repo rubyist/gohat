@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -27,7 +28,11 @@ Complete documentation is available at http://github.com/rubyist/heaputil`,
 			heapFile, _ := NewHeapFile(args[0])
 			objects := heapFile.Objects()
 			for _, object := range objects {
-				fmt.Printf("%x %s %d %d\n", object.Address, object.TypeName, object.Kind, object.Size)
+				typeName := "<unknown>"
+				if object.Type != nil {
+					typeName = object.Type.Name
+				}
+				fmt.Printf("%x %s %d %d\n", object.Address, typeName, object.Kind, object.Size)
 			}
 		},
 	}
@@ -37,7 +42,14 @@ Complete documentation is available at http://github.com/rubyist/heaputil`,
 		Use:   "object",
 		Short: "Dump the contents of an object",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("gonna dump an object", args)
+			if len(args) != 2 {
+				fmt.Println("object <heap file> <address>")
+				os.Exit(1)
+			}
+			heapFile, _ := NewHeapFile(args[0])
+			addr, _ := strconv.ParseInt(args[1], 16, 64)
+			object := heapFile.Object(addr)
+			fmt.Println(object.Content)
 		},
 	}
 	heapUtilCmd.AddCommand(objectCommand)
