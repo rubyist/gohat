@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
+	"github.com/rubyist/gohat/pkg/parser"
 	"github.com/spf13/cobra"
 	"os"
 	"strconv"
 )
 
 func main() {
-	var heapUtilCmd = &cobra.Command{
-		Use:   "heaputil",
-		Short: "Heaputil is go heap dump reader",
-		Long: `Heaputil can read and query go heap dump files.
-Complete documentation is available at http://github.com/rubyist/heaputil`,
+	var gohatCmd = &cobra.Command{
+		Use:   "gohat",
+		Short: "gohat is go heap dump analysis tool",
+		Long: `Gohat can read and query go heap dump files.
+Complete documentation is available at http://github.com/rubyist/gohat`,
 		Run: func(cmd *cobra.Command, args []string) {
 		},
 	}
@@ -25,7 +26,7 @@ Complete documentation is available at http://github.com/rubyist/heaputil`,
 				fmt.Println("Please specify a heap dump file")
 				os.Exit(1)
 			}
-			heapFile, _ := NewHeapFile(args[0])
+			heapFile, _ := parser.NewHeapFile(args[0])
 			objects := heapFile.Objects()
 			for _, object := range objects {
 				typeName := "<unknown>"
@@ -36,7 +37,7 @@ Complete documentation is available at http://github.com/rubyist/heaputil`,
 			}
 		},
 	}
-	heapUtilCmd.AddCommand(objectsCommand)
+	gohatCmd.AddCommand(objectsCommand)
 
 	var objectCommand = &cobra.Command{
 		Use:   "object",
@@ -46,13 +47,13 @@ Complete documentation is available at http://github.com/rubyist/heaputil`,
 				fmt.Println("object <heap file> <address>")
 				os.Exit(1)
 			}
-			heapFile, _ := NewHeapFile(args[0])
+			heapFile, _ := parser.NewHeapFile(args[0])
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 			object := heapFile.Object(addr)
 			fmt.Println(object.Content)
 		},
 	}
-	heapUtilCmd.AddCommand(objectCommand)
+	gohatCmd.AddCommand(objectCommand)
 
 	var memStatsCommand = &cobra.Command{
 		Use:   "memstats",
@@ -62,12 +63,12 @@ Complete documentation is available at http://github.com/rubyist/heaputil`,
 				fmt.Println("memstats <heap file>")
 				os.Exit(1)
 			}
-			heapFile, _ := NewHeapFile(args[0])
+			heapFile, _ := parser.NewHeapFile(args[0])
 			memstats := heapFile.MemStats()
 			fmt.Println(memstats)
 		},
 	}
-	heapUtilCmd.AddCommand(memStatsCommand)
+	gohatCmd.AddCommand(memStatsCommand)
 
-	heapUtilCmd.Execute()
+	gohatCmd.Execute()
 }

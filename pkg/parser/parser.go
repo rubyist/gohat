@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"bufio"
@@ -285,9 +285,11 @@ func readDataSegment(r io.ByteReader) {
 
 // (13) bss
 func readBSS(r io.ByteReader) {
-	readUvarint(r)   // address of the start of the data segment
-	readString(r)    // contents of the data segment
-	readFieldList(r) // kind and offset of pointer-containing fields in the data segment.
+	addr := readUvarint(r)     // address of the start of the data segment
+	contents := readString(r)  // contents of the data segment
+	fields := readFieldList(r) // kind and offset of pointer-containing fields in the data segment.
+	fmt.Println("data: ", addr, len(contents))
+	fmt.Println(fields)
 }
 
 // (14) defer record
