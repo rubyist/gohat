@@ -12,6 +12,10 @@ var typeList map[uint64]*Type
 var objectList map[uint64]*Object
 
 func (h *HeapFile) parse(contentObj uint64) {
+	if h.parsed {
+		return
+	}
+
 	typeList = make(map[uint64]*Type, 0)
 	objectList = make(map[uint64]*Object, 0)
 
@@ -25,6 +29,7 @@ func (h *HeapFile) parse(contentObj uint64) {
 
 		switch kind {
 		case 0:
+			h.parsed = true
 			return
 		case 1:
 			o := readObject(h.byteReader, contentObj)
@@ -81,9 +86,9 @@ func readObject(r io.ByteReader, contentObj uint64) *Object {
 	if o.TypeAddress != 0 {
 		o.Type = typeList[o.TypeAddress]
 	}
-	if contentObj == o.Address {
-		o.Content = content
-	}
+	// if contentObj == o.Address {
+	o.Content = content
+	// }
 	return o
 }
 

@@ -102,6 +102,60 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(objectCommand)
 
+	var sameCommand = &cobra.Command{
+		Use:   "same",
+		Short: "find objects that are the same in two heap files",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile1, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			if len(args) != 2 {
+				fmt.Println("same <heap file> <heap file>")
+				os.Exit(1)
+			}
+
+			heapFile2, err := heapfile.New(args[1])
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			heapObjects1 := heapFile1.Objects()
+
+			same := make([]uint64, 0, len(heapObjects1))
+
+			for _, obj := range heapObjects1 {
+				if cmp := heapFile2.Object(int64(obj.Address)); cmp != nil {
+					if cmp.TypeAddress == obj.TypeAddress &&
+						cmp.Kind == obj.Kind &&
+						cmp.Content == obj.Content &&
+						cmp.Size == obj.Size {
+						same = append(same, cmp.Address)
+					}
+				}
+			}
+
+			for _, addr := range same {
+				object := heapFile2.Object(int64(addr))
+				fmt.Printf("%016x %d %d %d\n", object.Address, object.Kind, object.Size, len(object.Content))
+				fmt.Println([]byte(object.Content))
+				fmt.Println(object.Content)
+				if object.Type != nil {
+					fmt.Println("Type: ", object.Type.Name)
+					fmt.Println("Field List:")
+					for _, field := range object.Type.FieldList {
+						fmt.Printf("%d 0x%016x\n", field.Kind, field.Offset)
+					}
+				}
+				fmt.Printf("\n\n")
+			}
+		},
+	}
+	gohatCmd.AddCommand(sameCommand)
+
 	var typesCommand = &cobra.Command{
 		Use:   "types",
 		Short: "Dump all the types found in the heap",

@@ -16,6 +16,7 @@ var dumpHeader = "go1.3 heap dump\n"
 type HeapFile struct {
 	memStats   *runtime.MemStats
 	byteReader *bufio.Reader
+	parsed     bool
 }
 
 func New(file string) (*HeapFile, error) {
