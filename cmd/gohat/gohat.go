@@ -22,11 +22,12 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "objects",
 		Short: "Dump a list of objects",
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				fmt.Println("Please specify a heap dump file")
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
 				os.Exit(1)
 			}
-			heapFile, _ := parser.NewHeapFile(args[0])
+
 			objects := heapFile.Objects()
 			for _, object := range objects {
 				typeName := "<unknown>"
@@ -43,11 +44,17 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "object",
 		Short: "Dump the contents of an object",
 		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
 			if len(args) != 2 {
 				fmt.Println("object <heap file> <address>")
 				os.Exit(1)
 			}
-			heapFile, _ := parser.NewHeapFile(args[0])
+
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 			object := heapFile.Object(addr)
 			fmt.Println(object.Content)
@@ -59,11 +66,12 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "memstats",
 		Short: "Dump the memstats",
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				fmt.Println("memstats <heap file>")
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
 				os.Exit(1)
 			}
-			heapFile, _ := parser.NewHeapFile(args[0])
+
 			memstats := heapFile.MemStats()
 			fmt.Println(memstats)
 		},
@@ -71,4 +79,12 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	gohatCmd.AddCommand(memStatsCommand)
 
 	gohatCmd.Execute()
+}
+
+func verifyHeapDumpFile(args []string) (*parser.HeapFile, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("heap file required")
+	}
+	heapFile, err := parser.NewHeapFile(args[0])
+	return heapFile, err
 }
