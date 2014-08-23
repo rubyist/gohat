@@ -11,7 +11,7 @@ import (
 var typeList map[uint64]*Type
 var objectList map[uint64]*Object
 
-func (h *HeapFile) parse(contentObj uint64) {
+func (h *HeapFile) parse() {
 	if h.parsed {
 		return
 	}
@@ -32,7 +32,7 @@ func (h *HeapFile) parse(contentObj uint64) {
 			h.parsed = true
 			return
 		case 1:
-			o := readObject(h.byteReader, contentObj)
+			o := readObject(h.byteReader)
 			objectList[o.Address] = o
 		case 2:
 			readOtherRoot(h.byteReader)
@@ -76,7 +76,7 @@ func (h *HeapFile) parse(contentObj uint64) {
 
 // (1) object: uvarint uvarint uvarint string
 
-func readObject(r io.ByteReader, contentObj uint64) *Object {
+func readObject(r io.ByteReader) *Object {
 	o := &Object{}
 	o.Address = readUvarint(r)     // address of object
 	o.TypeAddress = readUvarint(r) // address of type descriptor (or 0 if unknown)
@@ -86,9 +86,7 @@ func readObject(r io.ByteReader, contentObj uint64) *Object {
 	if o.TypeAddress != 0 {
 		o.Type = typeList[o.TypeAddress]
 	}
-	// if contentObj == o.Address {
 	o.Content = content
-	// }
 	return o
 }
 

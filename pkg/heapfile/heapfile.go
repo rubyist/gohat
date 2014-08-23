@@ -37,12 +37,12 @@ func New(file string) (*HeapFile, error) {
 }
 
 func (h *HeapFile) MemStats() *runtime.MemStats {
-	h.parse(0)
+	h.parse()
 	return h.memStats
 }
 
 func (h *HeapFile) Objects() []*Object {
-	h.parse(0)
+	h.parse()
 	objects := make([]*Object, 0, len(objectList))
 	for _, v := range objectList {
 		objects = append(objects, v)
@@ -51,7 +51,7 @@ func (h *HeapFile) Objects() []*Object {
 }
 
 func (h *HeapFile) Object(addr int64) *Object {
-	h.parse(uint64(addr))
+	h.parse()
 	if object, ok := objectList[uint64(addr)]; ok {
 		return object
 	}
@@ -59,7 +59,7 @@ func (h *HeapFile) Object(addr int64) *Object {
 }
 
 func (h *HeapFile) Types() []*Type {
-	h.parse(0)
+	h.parse()
 	types := make([]*Type, 0, len(typeList))
 	for _, t := range typeList {
 		types = append(types, t)
@@ -68,7 +68,7 @@ func (h *HeapFile) Types() []*Type {
 }
 
 func (h *HeapFile) Type(addr int64) *Type {
-	h.parse(0)
+	h.parse()
 	return typeList[uint64(addr)]
 }
 
