@@ -96,6 +96,32 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(typesCommand)
 
+	var typeCommand = &cobra.Command{
+		Use:   "type",
+		Short: "Dump information about a type",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			if len(args) != 2 {
+				fmt.Println("type <heap file> <address>")
+				os.Exit(1)
+			}
+
+			addr, _ := strconv.ParseInt(args[1], 16, 64)
+
+			t := heapFile.Type(addr)
+			fmt.Printf("%x %d %s\n", t.Address, len(t.FieldList), t.Name)
+			for _, field := range t.FieldList {
+				fmt.Println(field)
+			}
+		},
+	}
+	gohatCmd.AddCommand(typeCommand)
+
 	gohatCmd.Execute()
 }
 

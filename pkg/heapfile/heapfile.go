@@ -66,6 +66,11 @@ func (h *HeapFile) Types() []*Type {
 	return types
 }
 
+func (h *HeapFile) Type(addr int64) *Type {
+	h.parse(0)
+	return typeList[uint64(addr)]
+}
+
 type Object struct {
 	Address     uint64
 	TypeAddress uint64
