@@ -18,6 +18,22 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		},
 	}
 
+	var memStatsCommand = &cobra.Command{
+		Use:   "memstats",
+		Short: "Dump the memstats",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			memstats := heapFile.MemStats()
+			fmt.Println(memstats)
+		},
+	}
+	gohatCmd.AddCommand(memStatsCommand)
+
 	var objectsCommand = &cobra.Command{
 		Use:   "objects",
 		Short: "Dump a list of objects",
@@ -62,9 +78,9 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(objectCommand)
 
-	var memStatsCommand = &cobra.Command{
-		Use:   "memstats",
-		Short: "Dump the memstats",
+	var typesCommand = &cobra.Command{
+		Use:   "types",
+		Short: "Dump all the types found in the heap",
 		Run: func(cmd *cobra.Command, args []string) {
 			heapFile, err := verifyHeapDumpFile(args)
 			if err != nil {
@@ -72,11 +88,13 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				os.Exit(1)
 			}
 
-			memstats := heapFile.MemStats()
-			fmt.Println(memstats)
+			types := heapFile.Types()
+			for _, t := range types {
+				fmt.Printf("%x %d %s\n", t.Address, len(t.FieldList), t.Name)
+			}
 		},
 	}
-	gohatCmd.AddCommand(memStatsCommand)
+	gohatCmd.AddCommand(typesCommand)
 
 	gohatCmd.Execute()
 }

@@ -69,37 +69,7 @@ func (h *HeapFile) parse(contentObj uint64) {
 	}
 }
 
-func (h *HeapFile) Objects() []*Object {
-	objects := make([]*Object, len(objectList))
-	h.parse(0)
-	for _, v := range objectList {
-		objects = append(objects, v)
-	}
-	return objects
-}
-
-func (h *HeapFile) Object(addr int64) *Object {
-	h.parse(uint64(addr))
-	if object, ok := objectList[uint64(addr)]; ok {
-		return object
-	}
-	return nil
-}
-
-func (h *HeapFile) MemStats() *runtime.MemStats {
-	h.parse(0)
-	return h.memStats
-}
-
 // (1) object: uvarint uvarint uvarint string
-type Object struct {
-	Address     uint64
-	TypeAddress uint64
-	Kind        uint64
-	Content     string
-	Size        int
-	Type        *Type
-}
 
 func readObject(r io.ByteReader, contentObj uint64) *Object {
 	o := &Object{}
@@ -124,21 +94,13 @@ func readOtherRoot(r io.ByteReader) {
 }
 
 // (3) type: uvarint uvarint string bool fieldlist
-type Type struct {
-	Address uint64
-	Size    uint64
-	Name    string
-	IsPtr   uint64
-	// FieldList
-}
-
 func readType(r io.ByteReader) *Type {
 	t := &Type{}
-	t.Address = readUvarint(r) // address of type descriptor
-	t.Size = readUvarint(r)    // size of an object of this type
-	t.Name = readString(r)     // name of type
-	t.IsPtr = readUvarint(r)   // (bool) whether the data field of an interface containing a value of this type is a pointer
-	readFieldList(r)           // a list of the kinds and locations of pointer-containing fields in objects of this type
+	t.Address = readUvarint(r)     // address of type descriptor
+	t.Size = readUvarint(r)        // size of an object of this type
+	t.Name = readString(r)         // name of type
+	t.IsPtr = readUvarint(r)       // (bool) whether the data field of an interface containing a value of this type is a pointer
+	t.FieldList = readFieldList(r) // a list of the kinds and locations of pointer-containing fields in objects of this type
 	return t
 }
 
@@ -258,11 +220,9 @@ func readDataSegment(r io.ByteReader) {
 
 // (13) bss
 func readBSS(r io.ByteReader) {
-	addr := readUvarint(r)     // address of the start of the data segment
-	contents := readString(r)  // contents of the data segment
-	fields := readFieldList(r) // kind and offset of pointer-containing fields in the data segment.
-	fmt.Println("data: ", addr, len(contents))
-	fmt.Println(fields)
+	readUvarint(r)   // address of the start of the data segment
+	readString(r)    // contents of the data segment
+	readFieldList(r) // kind and offset of pointer-containing fields in the data segment.
 }
 
 // (14) defer record
@@ -329,11 +289,6 @@ func readString(r io.ByteReader) string {
 		by = append(by, b)
 	}
 	return string(by)
-}
-
-type Field struct {
-	Kind   uint64
-	Offset uint64
 }
 
 func readFieldList(r io.ByteReader) []Field {

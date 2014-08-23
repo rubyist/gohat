@@ -34,3 +34,56 @@ func New(file string) (*HeapFile, error) {
 
 	return &HeapFile{byteReader: byteReader}, nil
 }
+
+func (h *HeapFile) MemStats() *runtime.MemStats {
+	h.parse(0)
+	return h.memStats
+}
+
+func (h *HeapFile) Objects() []*Object {
+	h.parse(0)
+	objects := make([]*Object, 0, len(objectList))
+	for _, v := range objectList {
+		objects = append(objects, v)
+	}
+	return objects
+}
+
+func (h *HeapFile) Object(addr int64) *Object {
+	h.parse(uint64(addr))
+	if object, ok := objectList[uint64(addr)]; ok {
+		return object
+	}
+	return nil
+}
+
+func (h *HeapFile) Types() []*Type {
+	h.parse(0)
+	types := make([]*Type, 0, len(typeList))
+	for _, t := range typeList {
+		types = append(types, t)
+	}
+	return types
+}
+
+type Object struct {
+	Address     uint64
+	TypeAddress uint64
+	Kind        uint64
+	Content     string
+	Size        int
+	Type        *Type
+}
+
+type Type struct {
+	Address   uint64
+	Size      uint64
+	Name      string
+	IsPtr     uint64
+	FieldList []Field
+}
+
+type Field struct {
+	Kind   uint64
+	Offset uint64
+}
