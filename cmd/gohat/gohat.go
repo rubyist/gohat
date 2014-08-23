@@ -50,7 +50,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				if object.Type != nil {
 					typeName = object.Type.Name
 				}
-				fmt.Printf("%x %s %d %d\n", object.Address, typeName, object.Kind, object.Size)
+				fmt.Printf("%016x %s %d %d\n", object.Address, typeName, object.Kind, object.Size)
 			}
 		},
 	}
@@ -73,7 +73,31 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 			object := heapFile.Object(addr)
+
+			var kind string
+			// (0=regular 1=array 2=channel 127=conservatively scanned
+			switch object.Kind {
+			case 0:
+				kind = "regular"
+			case 1:
+				kind = "array"
+			case 2:
+				kind = "channel"
+			case 127:
+				kind = "conservatively scanned"
+			default:
+				kind = "<unknown>"
+			}
+
+			fmt.Printf("%016x %s %d %d\n", object.Address, kind, object.Size, len(object.Content))
+			fmt.Println([]byte(object.Content))
 			fmt.Println(object.Content)
+			if object.Type != nil {
+				fmt.Println("Field List:")
+				for _, field := range object.Type.FieldList {
+					fmt.Printf("%d 0x%016x\n", field.Kind, field.Offset)
+				}
+			}
 		},
 	}
 	gohatCmd.AddCommand(objectCommand)
@@ -90,7 +114,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			types := heapFile.Types()
 			for _, t := range types {
-				fmt.Printf("%x %d %s\n", t.Address, len(t.FieldList), t.Name)
+				fmt.Printf("%016x %d %s\n", t.Address, len(t.FieldList), t.Name)
 			}
 		},
 	}
@@ -114,7 +138,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 
 			t := heapFile.Type(addr)
-			fmt.Printf("%x %d %s\n", t.Address, len(t.FieldList), t.Name)
+			fmt.Printf("%016x %d %s\n", t.Address, len(t.FieldList), t.Name)
 			for _, field := range t.FieldList {
 				fmt.Println(field)
 			}
