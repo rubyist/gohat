@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/rubyist/gohat/pkg/parser"
+	"github.com/rubyist/gohat/pkg/heapfile"
 	"github.com/spf13/cobra"
 	"os"
 	"strconv"
@@ -81,10 +81,10 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	gohatCmd.Execute()
 }
 
-func verifyHeapDumpFile(args []string) (*parser.HeapFile, error) {
+func verifyHeapDumpFile(args []string) (*heapfile.HeapFile, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("heap file required")
 	}
-	heapFile, err := parser.NewHeapFile(args[0])
+	heapFile, err := heapfile.New(args[0])
 	return heapFile, err
 }

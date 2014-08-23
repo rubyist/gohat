@@ -1,7 +1,6 @@
-package parser
+package heapfile
 
 import (
-	"bufio"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -9,42 +8,16 @@ import (
 	"runtime"
 )
 
-var dumpHeader = "go1.3 heap dump\n"
 var typeList map[uint64]*Type
 var objectList map[uint64]*Object
-
-type HeapFile struct {
-	File     string
-	memStats *runtime.MemStats
-}
-
-func NewHeapFile(file string) (*HeapFile, error) {
-	return &HeapFile{File: file}, nil
-}
 
 func (h *HeapFile) parse(contentObj uint64) {
 	typeList = make(map[uint64]*Type, 0)
 	objectList = make(map[uint64]*Object, 0)
 
-	dumpFile, err := os.Open(h.File)
-	if err != nil {
-		fmt.Println("Error opening dump file", err)
-		os.Exit(1)
-	}
-
-	// File header is
-	header := make([]byte, len(dumpHeader))
-	dumpFile.Read(header)
-	if string(header) != dumpHeader {
-		fmt.Println("Invalid dump file")
-		os.Exit(1)
-	}
-
-	byteReader := bufio.NewReader(dumpFile)
-
 	for {
 		// From here on out is a series of records, starting with a uvarint
-		kind, err := binary.ReadUvarint(byteReader)
+		kind, err := binary.ReadUvarint(h.byteReader)
 		if err != nil {
 			fmt.Println("Error reading:", err)
 			os.Exit(1)
@@ -54,41 +27,41 @@ func (h *HeapFile) parse(contentObj uint64) {
 		case 0:
 			return
 		case 1:
-			o := readObject(byteReader, contentObj)
+			o := readObject(h.byteReader, contentObj)
 			objectList[o.Address] = o
 		case 2:
-			readOtherRoot(byteReader)
+			readOtherRoot(h.byteReader)
 		case 3:
-			t := readType(byteReader)
+			t := readType(h.byteReader)
 			typeList[t.Address] = t
 		case 4:
-			readGoroutine(byteReader)
+			readGoroutine(h.byteReader)
 		case 5:
-			readStackFrame(byteReader)
+			readStackFrame(h.byteReader)
 		case 6:
-			readDumpParams(byteReader)
+			readDumpParams(h.byteReader)
 		case 7:
-			readFinalizer(byteReader)
+			readFinalizer(h.byteReader)
 		case 8:
-			readiTab(byteReader)
+			readiTab(h.byteReader)
 		case 9:
-			readOSThread(byteReader)
+			readOSThread(h.byteReader)
 		case 10:
-			h.memStats = readMemStats(byteReader)
+			h.memStats = readMemStats(h.byteReader)
 		case 11:
-			readQueuedFinalizer(byteReader)
+			readQueuedFinalizer(h.byteReader)
 		case 12:
-			readDataSegment(byteReader)
+			readDataSegment(h.byteReader)
 		case 13:
-			readBSS(byteReader)
+			readBSS(h.byteReader)
 		case 14:
-			readDeferRecord(byteReader)
+			readDeferRecord(h.byteReader)
 		case 15:
-			readPanicRecord(byteReader)
+			readPanicRecord(h.byteReader)
 		case 16:
-			readAllocFree(byteReader)
+			readAllocFree(h.byteReader)
 		case 17:
-			readAllocSampleRecord(byteReader)
+			readAllocSampleRecord(h.byteReader)
 		default:
 			fmt.Println("Unknown object kind")
 			os.Exit(1)
