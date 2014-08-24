@@ -18,9 +18,9 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		},
 	}
 
-	var dumpParamsCommand = &cobra.Command{
-		Use:   "params",
-		Short: "Show the heap parameters",
+	var allocsCommand = &cobra.Command{
+		Use:   "allocs",
+		Short: "Dump the alloc stack trace samples",
 		Run: func(cmd *cobra.Command, args []string) {
 			heapFile, err := verifyHeapDumpFile(args)
 			if err != nil {
@@ -28,22 +28,46 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				os.Exit(1)
 			}
 
-			dumpParams := heapFile.DumpParams()
-			if dumpParams.BigEndian {
-				fmt.Println("Big Endian")
-			} else {
-				fmt.Println("Little Endian")
+			allocs := heapFile.Allocs()
+			fmt.Println(len(allocs), "alloc samples")
+			for _, alloc := range allocs {
+				obj := alloc.Object()
+				if obj.Type == nil {
+					fmt.Println("<unknown>")
+				} else {
+					fmt.Println(obj.Type.Name)
+				}
+				record := alloc.Profile()
+				fmt.Printf("%x %d %d %d\n", record.Record, record.Size, record.Allocs, record.Frees)
+				for _, frame := range record.Frames {
+					fmt.Printf("\t%s   %s:%d\n", frame.Name, frame.File, frame.Line)
+				}
+				fmt.Println()
 			}
-			fmt.Println("Pointer Size:", dumpParams.PtrSize)
-			fmt.Println("Channel Header Size:", dumpParams.ChHdrSize)
-			fmt.Printf("Heap Starting Address %02x\n", dumpParams.StartAddress)
-			fmt.Printf("Heap Ending Address: %02x\n", dumpParams.EndAddress)
-			fmt.Println("Architecture:", dumpParams.Arch)
-			fmt.Println("GOEXPERIMENT:", dumpParams.GoExperiment)
-			fmt.Println("nCPU:", dumpParams.NCPU)
 		},
 	}
-	gohatCmd.AddCommand(dumpParamsCommand)
+	gohatCmd.AddCommand(allocsCommand)
+
+	var memProfCommand = &cobra.Command{
+		Use:   "memprof",
+		Short: "Dump the alloc/free profile records",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			memProf := heapFile.MemProf()
+			for _, record := range memProf {
+				fmt.Printf("%x %d %d %d\n", record.Record, record.Size, record.Allocs, record.Frees)
+				for _, frame := range record.Frames {
+					fmt.Printf("\t%s   %s:%d\n", frame.Name, frame.File, frame.Line)
+				}
+			}
+		},
+	}
+	gohatCmd.AddCommand(memProfCommand)
 
 	var memStatsCommand = &cobra.Command{
 		Use:   "memstats",
@@ -91,28 +115,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		},
 	}
 	gohatCmd.AddCommand(memStatsCommand)
-
-	var objectsCommand = &cobra.Command{
-		Use:   "objects",
-		Short: "Dump a list of objects",
-		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
-
-			objects := heapFile.Objects()
-			for _, object := range objects {
-				typeName := "<unknown>"
-				if object.Type != nil {
-					typeName = object.Type.Name
-				}
-				fmt.Printf("%016x %s %s %d\n", object.Address, typeName, object.Kind(), object.Size)
-			}
-		},
-	}
-	gohatCmd.AddCommand(objectsCommand)
 
 	var objectAsString bool
 	var objectCommand = &cobra.Command{
@@ -162,6 +164,55 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	objectCommand.Flags().BoolVarP(&objectAsString, "string", "s", false, "Show object contents as a string")
 	gohatCmd.AddCommand(objectCommand)
+
+	var objectsCommand = &cobra.Command{
+		Use:   "objects",
+		Short: "Dump a list of objects",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			objects := heapFile.Objects()
+			for _, object := range objects {
+				typeName := "<unknown>"
+				if object.Type != nil {
+					typeName = object.Type.Name
+				}
+				fmt.Printf("%016x %s %s %d\n", object.Address, typeName, object.Kind(), object.Size)
+			}
+		},
+	}
+	gohatCmd.AddCommand(objectsCommand)
+
+	var paramsCommand = &cobra.Command{
+		Use:   "params",
+		Short: "Show the heap parameters",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			dumpParams := heapFile.DumpParams()
+			if dumpParams.BigEndian {
+				fmt.Println("Big Endian")
+			} else {
+				fmt.Println("Little Endian")
+			}
+			fmt.Println("Pointer Size:", dumpParams.PtrSize)
+			fmt.Println("Channel Header Size:", dumpParams.ChHdrSize)
+			fmt.Printf("Heap Starting Address %02x\n", dumpParams.StartAddress)
+			fmt.Printf("Heap Ending Address: %02x\n", dumpParams.EndAddress)
+			fmt.Println("Architecture:", dumpParams.Arch)
+			fmt.Println("GOEXPERIMENT:", dumpParams.GoExperiment)
+			fmt.Println("nCPU:", dumpParams.NCPU)
+		},
+	}
+	gohatCmd.AddCommand(paramsCommand)
 
 	var sameCommand = &cobra.Command{
 		Use:   "same",
@@ -233,24 +284,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(sameCommand)
 
-	var typesCommand = &cobra.Command{
-		Use:   "types",
-		Short: "Dump all the types found in the heap",
-		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
-
-			types := heapFile.Types()
-			for _, t := range types {
-				fmt.Printf("%016x %d %s\n", t.Address, len(t.FieldList), t.Name)
-			}
-		},
-	}
-	gohatCmd.AddCommand(typesCommand)
-
 	var typeCommand = &cobra.Command{
 		Use:   "type",
 		Short: "Dump information about a type",
@@ -276,6 +309,24 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		},
 	}
 	gohatCmd.AddCommand(typeCommand)
+
+	var typesCommand = &cobra.Command{
+		Use:   "types",
+		Short: "Dump all the types found in the heap",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			types := heapFile.Types()
+			for _, t := range types {
+				fmt.Printf("%016x %d %s\n", t.Address, len(t.FieldList), t.Name)
+			}
+		},
+	}
+	gohatCmd.AddCommand(typesCommand)
 
 	gohatCmd.Execute()
 }

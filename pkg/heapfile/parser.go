@@ -11,6 +11,8 @@ import (
 var typeList map[uint64]*Type
 var objectList map[uint64]*Object
 var dumpParams *DumpParams
+var memProf map[uint64]*Profile
+var allocs []*Alloc
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -19,6 +21,8 @@ func (h *HeapFile) parse() {
 
 	typeList = make(map[uint64]*Type, 0)
 	objectList = make(map[uint64]*Object, 0)
+	memProf = make(map[uint64]*Profile, 0)
+	allocs = make([]*Alloc, 0)
 
 	for {
 		// From here on out is a series of records, starting with a uvarint
@@ -65,9 +69,10 @@ func (h *HeapFile) parse() {
 		case 15:
 			readPanicRecord(h.byteReader)
 		case 16:
-			readAllocFree(h.byteReader)
+			profile := readAllocFree(h.byteReader)
+			memProf[profile.Record] = profile
 		case 17:
-			readAllocSampleRecord(h.byteReader)
+			allocs = append(allocs, readAllocSampleRecord(h.byteReader))
 		default:
 			fmt.Println("Unknown object kind")
 			os.Exit(1)
@@ -252,25 +257,34 @@ func readPanicRecord(r io.ByteReader) {
 }
 
 // (16) alloc/free profile record
-func readAllocFree(r io.ByteReader) {
-	readUvarint(r)           // record identifier
-	readUvarint(r)           // size of allocated object
-	frames := readUvarint(r) // number of stack frames. For each frame:
+func readAllocFree(r io.ByteReader) *Profile {
+	profile := &Profile{}
 
-	for i := 0; i < int(frames); i++ {
-		readString(r)  // function name
-		readString(r)  // file name
-		readUvarint(r) // line number
+	profile.Record = readUvarint(r)
+	profile.Size = readUvarint(r)
+	profile.NumFrames = readUvarint(r)
+
+	profile.Frames = make([]*Frame, 0, profile.NumFrames)
+
+	for i := 0; i < int(profile.NumFrames); i++ {
+		frame := &Frame{}
+		frame.Name = readString(r)
+		frame.File = readString(r)
+		frame.Line = readUvarint(r)
+		profile.Frames = append(profile.Frames, frame)
 	}
 
-	readUvarint(r) // number of allocations
-	readUvarint(r) // number of frees
+	profile.Allocs = readUvarint(r)
+	profile.Frees = readUvarint(r)
+	return profile
 }
 
 // (17) alloc stack trace sample
-func readAllocSampleRecord(r io.ByteReader) {
-	readUvarint(r) // address of object
-	readUvarint(r) // alloc/free profile record identifier
+func readAllocSampleRecord(r io.ByteReader) *Alloc {
+	alloc := &Alloc{}
+	alloc.objectAddress = readUvarint(r)
+	alloc.profileRecord = readUvarint(r)
+	return alloc
 }
 
 func readUvarint(r io.ByteReader) uint64 {

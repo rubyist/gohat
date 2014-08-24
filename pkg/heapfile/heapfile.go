@@ -77,6 +77,39 @@ func (h *HeapFile) DumpParams() *DumpParams {
 	return dumpParams
 }
 
+func (h *HeapFile) MemProf() []*Profile {
+	h.parse()
+	profiles := make([]*Profile, 0, len(memProf))
+	for _, p := range memProf {
+		profiles = append(profiles, p)
+	}
+	return profiles
+}
+
+func (h *HeapFile) Allocs() []*Alloc {
+	h.parse()
+	return allocs
+}
+
+type Alloc struct {
+	objectAddress uint64 // address of object
+	profileRecord uint64 // alloc/free profile record identifier
+}
+
+func (a *Alloc) Object() *Object {
+	if obj, ok := objectList[a.objectAddress]; ok {
+		return obj
+	}
+	return nil
+}
+
+func (a *Alloc) Profile() *Profile {
+	if profile, ok := memProf[a.profileRecord]; ok {
+		return profile
+	}
+	return nil
+}
+
 type Field struct {
 	kind   uint64 // kind
 	Offset uint64 // offset
@@ -138,4 +171,19 @@ type DumpParams struct {
 	Arch         uint64 // thechar = architecture specifier
 	GoExperiment string // GOEXPERIMENT environment variable value
 	NCPU         uint64 // runtime.ncpu
+}
+
+type Profile struct {
+	Record    uint64 // record identifier
+	Size      uint64 // size of allocated object
+	NumFrames uint64 // number of stack frames
+	Frames    []*Frame
+	Allocs    uint64 // number of allocations
+	Frees     uint64 // number of frees
+}
+
+type Frame struct {
+	Name string // function name
+	File string // file name
+	Line uint64 // line number
 }
