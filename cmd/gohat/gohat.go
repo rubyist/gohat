@@ -108,7 +108,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				if object.Type != nil {
 					typeName = object.Type.Name
 				}
-				fmt.Printf("%016x %s %d %d\n", object.Address, typeName, object.Kind, object.Size)
+				fmt.Printf("%016x %s %s %d\n", object.Address, typeName, object.Kind(), object.Size)
 			}
 		},
 	}
