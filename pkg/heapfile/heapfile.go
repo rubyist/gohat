@@ -78,8 +78,24 @@ func (h *HeapFile) DumpParams() *DumpParams {
 }
 
 type Field struct {
-	Kind   uint64 // kind
+	kind   uint64 // kind
 	Offset uint64 // offset
+}
+
+func (f *Field) Kind() string {
+	switch f.kind {
+	case 1:
+		return "Ptr"
+	case 2:
+		return "String"
+	case 3:
+		return "Slice"
+	case 4:
+		return "Iface"
+	case 5:
+		return "Eface"
+	}
+	return ""
 }
 
 type Object struct {
