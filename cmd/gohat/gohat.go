@@ -337,6 +337,28 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(sameCommand)
 
+	var stackFramesCommand = &cobra.Command{
+		Use:   "stackframes",
+		Short: "Dump the stack frames",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			for _, frame := range heapFile.StackFrames() {
+				fmt.Println(frame.Name)
+				fmt.Println("Field List:")
+				for _, field := range frame.FieldList {
+					fmt.Printf("\t%s 0x%016x\n", field.Kind(), field.Offset)
+				}
+				fmt.Println("")
+			}
+		},
+	}
+	gohatCmd.AddCommand(stackFramesCommand)
+
 	var typeCommand = &cobra.Command{
 		Use:   "type",
 		Short: "Dump information about a type",

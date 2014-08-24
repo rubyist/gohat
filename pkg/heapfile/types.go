@@ -131,10 +131,22 @@ type Root struct {
 	Pointer     uint64 // root pointer
 }
 
+type StackFrame struct {
+	StackPointer      uint64   // stack pointer (lowest address inf rame)
+	DepthInStack      uint64   // depth in stack (0 = top of stack)
+	ChildFramePointer uint64   // stack pointer of child frame (or 0 if none)
+	Contents          string   // contents of stack frame
+	EntryPC           uint64   // entry pc for function
+	CurrentPC         uint64   // current pc for function
+	ContinuationPC    uint64   // continuation pc for function (where functin may resume, if anywhere)
+	Name              string   // function name
+	FieldList         []*Field // list of kind and offset of pointer-containing fields in this frame
+}
+
 type Type struct {
-	Address   uint64  // address of type descriptor
-	Size      uint64  // size of an object of thise type
-	Name      string  // name of type
-	IsPtr     bool    // whether the data field of an interface containing a value of this type is a pointer
-	FieldList []Field // a list of the kinds and locations of pointer-containing fields in objects of this type
+	Address   uint64   // address of type descriptor
+	Size      uint64   // size of an object of thise type
+	Name      string   // name of type
+	IsPtr     bool     // whether the data field of an interface containing a value of this type is a pointer
+	FieldList []*Field // a list of the kinds and locations of pointer-containing fields in objects of this type
 }

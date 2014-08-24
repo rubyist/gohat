@@ -100,3 +100,8 @@ func (h *HeapFile) Roots() []*Root {
 	h.parse()
 	return roots
 }
+
+func (h *HeapFile) StackFrames() []*StackFrame {
+	h.parse()
+	return stackFrames
+}

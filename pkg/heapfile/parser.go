@@ -15,6 +15,7 @@ var memProf map[uint64]*Profile
 var allocs []*Alloc
 var goroutines []*Goroutine
 var roots []*Root
+var stackFrames []*StackFrame
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -27,6 +28,7 @@ func (h *HeapFile) parse() {
 	allocs = make([]*Alloc, 0)
 	goroutines = make([]*Goroutine, 0)
 	roots = make([]*Root, 0)
+	stackFrames = make([]*StackFrame, 0)
 
 	for {
 		// From here on out is a series of records, starting with a uvarint
@@ -51,7 +53,7 @@ func (h *HeapFile) parse() {
 		case 4:
 			goroutines = append(goroutines, readGoroutine(h.byteReader))
 		case 5:
-			readStackFrame(h.byteReader)
+			stackFrames = append(stackFrames, readStackFrame(h.byteReader))
 		case 6:
 			dumpParams = readDumpParams(h.byteReader)
 		case 7:
@@ -137,16 +139,18 @@ func readGoroutine(r io.ByteReader) *Goroutine {
 }
 
 // (5) stackframe
-func readStackFrame(r io.ByteReader) {
-	readUvarint(r)   // stack pointer (lowest address in frame)
-	readUvarint(r)   // depth in stack (0 = top of stack)
-	readUvarint(r)   // stack pointer of child frame (or 0 if none)
-	readString(r)    // contents of stack frame
-	readUvarint(r)   // entry pc for function
-	readUvarint(r)   // current pc for function
-	readUvarint(r)   // continuation pc for function (where function may resume, if anywhere)
-	readString(r)    // function name
-	readFieldList(r) // list of kind and offset of pointer-containing fields in this frame
+func readStackFrame(r io.ByteReader) *StackFrame {
+	sf := &StackFrame{}
+	sf.StackPointer = readUvarint(r)      // stack pointer (lowest address in frame)
+	sf.DepthInStack = readUvarint(r)      // depth in stack (0 = top of stack)
+	sf.ChildFramePointer = readUvarint(r) // stack pointer of child frame (or 0 if none)
+	sf.Contents = readString(r)           // contents of stack frame
+	sf.EntryPC = readUvarint(r)           // entry pc for function
+	sf.CurrentPC = readUvarint(r)         // current pc for function
+	sf.ContinuationPC = readUvarint(r)    // continuation pc for function (where function may resume, if anywhere)
+	sf.Name = readString(r)               // function name
+	sf.FieldList = readFieldList(r)       // list of kind and offset of pointer-containing fields in this frame
+	return sf
 }
 
 // (6) dump params: bool uvarint uvarint uvarint uvarint uvarint string varint
@@ -318,15 +322,16 @@ func readString(r io.ByteReader) string {
 	return string(by)
 }
 
-func readFieldList(r io.ByteReader) []Field {
-	fields := make([]Field, 0)
+func readFieldList(r io.ByteReader) []*Field {
+	fields := make([]*Field, 0)
 	var kind uint64
 	var offset uint64
 
 	kind = readUvarint(r)
 	for kind != 0 {
 		offset = readUvarint(r)
-		fields = append(fields, Field{kind, offset})
+		field := &Field{kind, offset}
+		fields = append(fields, field)
 		kind = readUvarint(r)
 	}
 
