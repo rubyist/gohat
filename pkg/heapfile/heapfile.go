@@ -77,26 +77,40 @@ func (h *HeapFile) DumpParams() *DumpParams {
 	return dumpParams
 }
 
+type Field struct {
+	Kind   uint64 // kind
+	Offset uint64 // offset
+}
+
 type Object struct {
-	Address     uint64
-	TypeAddress uint64
-	Kind        uint64
-	Content     string
-	Size        int
+	Address     uint64 // address of object
+	TypeAddress uint64 // address of type descriptor (or 0 if unknown)
+	kind        uint64 // kind of object  (0=regular 1=array 2=channel 127=conservatively scanned)
+	Content     string // contents of object
+	Size        int    // size of contents
 	Type        *Type
 }
 
-type Type struct {
-	Address   uint64
-	Size      uint64
-	Name      string
-	IsPtr     uint64
-	FieldList []Field
+func (o *Object) Kind() string {
+	switch o.kind {
+	case 0:
+		return "regular"
+	case 1:
+		return "array"
+	case 2:
+		return "channel"
+	case 127:
+		return "conservatively scanned"
+	}
+	return ""
 }
 
-type Field struct {
-	Kind   uint64
-	Offset uint64
+type Type struct {
+	Address   uint64  // address of type descriptor
+	Size      uint64  // size of an object of thise type
+	Name      string  // name of type
+	IsPtr     bool    // whether the data field of an interface containing a value of this type is a pointer
+	FieldList []Field // a list of the kinds and locations of pointer-containing fields in objects of this type
 }
 
 type DumpParams struct {

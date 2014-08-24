@@ -76,18 +76,16 @@ func (h *HeapFile) parse() {
 }
 
 // (1) object: uvarint uvarint uvarint string
-
 func readObject(r io.ByteReader) *Object {
 	o := &Object{}
-	o.Address = readUvarint(r)     // address of object
-	o.TypeAddress = readUvarint(r) // address of type descriptor (or 0 if unknown)
-	o.Kind = readUvarint(r)        // kind of object (0=regular 1=array 2=channel 127=conservatively scanned)
-	content := readString(r)       // contents of object (discard?)
-	o.Size = len(content)
+	o.Address = readUvarint(r)
+	o.TypeAddress = readUvarint(r)
+	o.kind = readUvarint(r)
+	o.Content = readString(r)
+	o.Size = len(o.Content)
 	if o.TypeAddress != 0 {
 		o.Type = typeList[o.TypeAddress]
 	}
-	o.Content = content
 	return o
 }
 
@@ -100,11 +98,11 @@ func readOtherRoot(r io.ByteReader) {
 // (3) type: uvarint uvarint string bool fieldlist
 func readType(r io.ByteReader) *Type {
 	t := &Type{}
-	t.Address = readUvarint(r)     // address of type descriptor
-	t.Size = readUvarint(r)        // size of an object of this type
-	t.Name = readString(r)         // name of type
-	t.IsPtr = readUvarint(r)       // (bool) whether the data field of an interface containing a value of this type is a pointer
-	t.FieldList = readFieldList(r) // a list of the kinds and locations of pointer-containing fields in objects of this type
+	t.Address = readUvarint(r)
+	t.Size = readUvarint(r)
+	t.Name = readString(r)
+	t.IsPtr = readUvarint(r) == 1
+	t.FieldList = readFieldList(r)
 	return t
 }
 
@@ -116,7 +114,7 @@ func readGoroutine(r io.ByteReader) {
 	readUvarint(r) // the locatio nof the go statement that created this routine
 	readUvarint(r) // status
 	readUvarint(r) // is a Go routine started by the system
-	readUvarint(r) //is a background Go routine
+	readUvarint(r) // is a background Go routine
 	readUvarint(r) // approximate time the goroutine last started waiting (ns since epoc)
 	readString(r)  // textual reason why it is waiting
 	readUvarint(r) // context pointer of currently running frame
@@ -141,14 +139,14 @@ func readStackFrame(r io.ByteReader) {
 // (6) dump params: bool uvarint uvarint uvarint uvarint uvarint string varint
 func readDumpParams(r io.ByteReader) *DumpParams {
 	dumpParams := &DumpParams{}
-	dumpParams.BigEndian = (readUvarint(r) == 0) // (bool) big endian
-	dumpParams.PtrSize = readUvarint(r)          // pointer size in bytes
-	dumpParams.ChHdrSize = readUvarint(r)        // channel header size in bytes
-	dumpParams.StartAddress = readUvarint(r)     // starting address of heap
-	dumpParams.EndAddress = readUvarint(r)       // ending address of heap
-	dumpParams.Arch = readUvarint(r)             // thechar = architecture specifier
-	dumpParams.GoExperiment = readString(r)      // GOEXPERIMENT environment variable value
-	dumpParams.NCPU = readUvarint(r)             // runtime.ncpu
+	dumpParams.BigEndian = (readUvarint(r) == 0)
+	dumpParams.PtrSize = readUvarint(r)
+	dumpParams.ChHdrSize = readUvarint(r)
+	dumpParams.StartAddress = readUvarint(r)
+	dumpParams.EndAddress = readUvarint(r)
+	dumpParams.Arch = readUvarint(r)
+	dumpParams.GoExperiment = readString(r)
+	dumpParams.NCPU = readUvarint(r)
 
 	return dumpParams
 }

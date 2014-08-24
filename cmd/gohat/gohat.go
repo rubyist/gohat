@@ -101,22 +101,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 			object := heapFile.Object(addr)
 
-			var kind string
-			// (0=regular 1=array 2=channel 127=conservatively scanned
-			switch object.Kind {
-			case 0:
-				kind = "regular"
-			case 1:
-				kind = "array"
-			case 2:
-				kind = "channel"
-			case 127:
-				kind = "conservatively scanned"
-			default:
-				kind = "<unknown>"
-			}
-
-			fmt.Printf("%016x %s %d %d\n", object.Address, kind, object.Size, len(object.Content))
+			fmt.Printf("%016x %s %d %d\n", object.Address, object.Kind(), object.Size, len(object.Content))
 			fmt.Println([]byte(object.Content))
 			fmt.Println(object.Content)
 			if object.Type != nil {
@@ -157,7 +142,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			for _, obj := range heapObjects1 {
 				if cmp := heapFile2.Object(int64(obj.Address)); cmp != nil {
 					if cmp.TypeAddress == obj.TypeAddress &&
-						cmp.Kind == obj.Kind &&
+						cmp.Kind() == obj.Kind() &&
 						cmp.Content == obj.Content &&
 						cmp.Size == obj.Size {
 						same = append(same, cmp.Address)
