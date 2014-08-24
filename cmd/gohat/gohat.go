@@ -48,6 +48,42 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(allocsCommand)
 
+	var goroutinesCommand = &cobra.Command{
+		Use:   "goroutines",
+		Short: "Dump goroutines",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			for _, g := range heapFile.Goroutines() {
+				fmt.Printf("Goroutine %d\n", g.Id)
+				fmt.Printf("\tAddress: %x\n", g.Address)
+				fmt.Printf("\tTop of stack: %x\n", g.Top)
+				fmt.Printf("\tCreator Location: %x\n", g.Location)
+				if g.System {
+					fmt.Println("\tSystem Started Go routine")
+				}
+				if g.Background {
+					fmt.Println("\tBackground Go routine")
+				}
+				fmt.Printf("\tStatus: %s\n", g.Status())
+				if reason := g.ReasonWaiting(); reason != "" {
+					fmt.Printf("\tReason Waiting: %s\n", reason)
+				}
+				fmt.Printf("\tLast Started Waiting: %d\n", g.LastWaiting)
+				fmt.Printf("\tCurrent Frame: %x\n", g.CurrentFrame)
+				fmt.Printf("\tOS Thread %d\n", g.OSThread)
+				fmt.Printf("\tTop Defer Record: %x\n", g.DeferRecord)
+				fmt.Printf("\tTop Panic Record: %x\n", g.PanicRecord)
+				fmt.Println("")
+			}
+		},
+	}
+	gohatCmd.AddCommand(goroutinesCommand)
+
 	var memProfCommand = &cobra.Command{
 		Use:   "memprof",
 		Short: "Dump the alloc/free profile records",

@@ -13,6 +13,7 @@ var objectList map[uint64]*Object
 var dumpParams *DumpParams
 var memProf map[uint64]*Profile
 var allocs []*Alloc
+var goroutines []*Goroutine
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -23,6 +24,7 @@ func (h *HeapFile) parse() {
 	objectList = make(map[uint64]*Object, 0)
 	memProf = make(map[uint64]*Profile, 0)
 	allocs = make([]*Alloc, 0)
+	goroutines = make([]*Goroutine, 0)
 
 	for {
 		// From here on out is a series of records, starting with a uvarint
@@ -45,7 +47,7 @@ func (h *HeapFile) parse() {
 			t := readType(h.byteReader)
 			typeList[t.Address] = t
 		case 4:
-			readGoroutine(h.byteReader)
+			goroutines = append(goroutines, readGoroutine(h.byteReader))
 		case 5:
 			readStackFrame(h.byteReader)
 		case 6:
@@ -112,20 +114,22 @@ func readType(r io.ByteReader) *Type {
 }
 
 // (4) goroutine
-func readGoroutine(r io.ByteReader) {
-	readUvarint(r) // address of descriptor
-	readUvarint(r) // pointer to the top of the stack (the currently running frame, a.k.a. depth 0)
-	readUvarint(r) // go routine ID
-	readUvarint(r) // the locatio nof the go statement that created this routine
-	readUvarint(r) // status
-	readUvarint(r) // is a Go routine started by the system
-	readUvarint(r) // is a background Go routine
-	readUvarint(r) // approximate time the goroutine last started waiting (ns since epoc)
-	readString(r)  // textual reason why it is waiting
-	readUvarint(r) // context pointer of currently running frame
-	readUvarint(r) // address of os thread descriptor (M)
-	readUvarint(r) // top defer recort
-	readUvarint(r) // top panic record
+func readGoroutine(r io.ByteReader) *Goroutine {
+	g := &Goroutine{}
+	g.Address = readUvarint(r)
+	g.Top = readUvarint(r)
+	g.Id = readUvarint(r)
+	g.Location = readUvarint(r)
+	g.status = readUvarint(r)
+	g.System = readUvarint(r) == 1
+	g.Background = readUvarint(r) == 1
+	g.LastWaiting = readUvarint(r)
+	g.reasonWaiting = readString(r)
+	g.CurrentFrame = readUvarint(r)
+	g.OSThread = readUvarint(r)
+	g.DeferRecord = readUvarint(r)
+	g.PanicRecord = readUvarint(r)
+	return g
 }
 
 // (5) stackframe
