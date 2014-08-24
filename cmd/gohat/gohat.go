@@ -137,7 +137,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				fmt.Println(object.Type.Name)
 			}
 			fmt.Println("")
-			fmt.Printf("% x\n", object.Content)
+			fmt.Println(object.Content)
 			fmt.Println("")
 
 			if object.Type != nil {
@@ -145,11 +145,11 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				var lastOffset uint64
 				for idx, field := range object.Type.FieldList {
 					if idx == len(object.Type.FieldList)-1 {
-						fmt.Printf("%s 0x%016x  % x\n", field.Kind(), field.Offset, object.Content[lastOffset:])
+						fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:]))
 					} else {
 						lastOffset = object.Type.FieldList[idx].Offset
 						nextOffset := object.Type.FieldList[idx+1].Offset
-						fmt.Printf("%s 0x%016x  % x\n", field.Kind(), field.Offset, object.Content[lastOffset:nextOffset])
+						fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:nextOffset]))
 					}
 				}
 			}
