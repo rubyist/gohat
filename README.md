@@ -17,15 +17,6 @@ nCPU: 8
 
 ### Show the memstats at the time of the dump
 ```
-$ gohat params dumpfile.dump
-Big Endian
-Pointer Size: 8
-Channel Header Size: 88
-Heap Starting Address 2081a4000
-Heap Ending Address: 2082a4000
-Architecture: 54
-GOEXPERIMENT:
-nCPU: 8
 $ gohat memstats dumpfile.dump
 General statistics
 Alloc: 174864
