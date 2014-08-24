@@ -10,6 +10,7 @@ import (
 
 var typeList map[uint64]*Type
 var objectList map[uint64]*Object
+var dumpParams *DumpParams
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -44,7 +45,7 @@ func (h *HeapFile) parse() {
 		case 5:
 			readStackFrame(h.byteReader)
 		case 6:
-			readDumpParams(h.byteReader)
+			dumpParams = readDumpParams(h.byteReader)
 		case 7:
 			readFinalizer(h.byteReader)
 		case 8:
@@ -138,15 +139,18 @@ func readStackFrame(r io.ByteReader) {
 }
 
 // (6) dump params: bool uvarint uvarint uvarint uvarint uvarint string varint
-func readDumpParams(r io.ByteReader) {
-	readUvarint(r) // (bool) big endian
-	readUvarint(r) // pointer size in bytes
-	readUvarint(r) // channel header size in bytes
-	readUvarint(r) // starting address of heap
-	readUvarint(r) // ending address of heap
-	readUvarint(r) // thechar = architecture specifier
-	readString(r)  // GOEXPERIMENT environment variable value
-	readUvarint(r) // runtime.ncpu
+func readDumpParams(r io.ByteReader) *DumpParams {
+	dumpParams := &DumpParams{}
+	dumpParams.BigEndian = (readUvarint(r) == 0) // (bool) big endian
+	dumpParams.PtrSize = readUvarint(r)          // pointer size in bytes
+	dumpParams.ChHdrSize = readUvarint(r)        // channel header size in bytes
+	dumpParams.StartAddress = readUvarint(r)     // starting address of heap
+	dumpParams.EndAddress = readUvarint(r)       // ending address of heap
+	dumpParams.Arch = readUvarint(r)             // thechar = architecture specifier
+	dumpParams.GoExperiment = readString(r)      // GOEXPERIMENT environment variable value
+	dumpParams.NCPU = readUvarint(r)             // runtime.ncpu
+
+	return dumpParams
 }
 
 // (7) registered finalizer

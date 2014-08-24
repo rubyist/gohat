@@ -72,6 +72,11 @@ func (h *HeapFile) Type(addr int64) *Type {
 	return typeList[uint64(addr)]
 }
 
+func (h *HeapFile) DumpParams() *DumpParams {
+	h.parse()
+	return dumpParams
+}
+
 type Object struct {
 	Address     uint64
 	TypeAddress uint64
@@ -92,4 +97,15 @@ type Type struct {
 type Field struct {
 	Kind   uint64
 	Offset uint64
+}
+
+type DumpParams struct {
+	BigEndian    bool   // big endian
+	PtrSize      uint64 // pointer size in bytes
+	ChHdrSize    uint64 // channel header size in bytes
+	StartAddress uint64 // starting address of heap
+	EndAddress   uint64 // ending address of heap
+	Arch         uint64 // thechar = architecture specifier
+	GoExperiment string // GOEXPERIMENT environment variable value
+	NCPU         uint64 // runtime.ncpu
 }

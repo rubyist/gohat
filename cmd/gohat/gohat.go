@@ -18,6 +18,33 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		},
 	}
 
+	var dumpParamsCommand = &cobra.Command{
+		Use:   "params",
+		Short: "Show the heap parameters",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			dumpParams := heapFile.DumpParams()
+			if dumpParams.BigEndian {
+				fmt.Println("Big Endian")
+			} else {
+				fmt.Println("Little Endian")
+			}
+			fmt.Println("Pointer Size:", dumpParams.PtrSize)
+			fmt.Println("Channel Header Size:", dumpParams.ChHdrSize)
+			fmt.Printf("Heap Starting Address %02x\n", dumpParams.StartAddress)
+			fmt.Printf("Heap Ending Address: %02x\n", dumpParams.EndAddress)
+			fmt.Println("Architecture:", dumpParams.Arch)
+			fmt.Println("GOEXPERIMENT:", dumpParams.GoExperiment)
+			fmt.Println("nCPU:", dumpParams.NCPU)
+		},
+	}
+	gohatCmd.AddCommand(dumpParamsCommand)
+
 	var memStatsCommand = &cobra.Command{
 		Use:   "memstats",
 		Short: "Dump the memstats",
