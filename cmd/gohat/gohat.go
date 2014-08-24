@@ -114,6 +114,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(objectsCommand)
 
+	var objectAsString bool
 	var objectCommand = &cobra.Command{
 		Use:   "object",
 		Short: "Dump the contents of an object",
@@ -137,7 +138,11 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				fmt.Println(object.Type.Name)
 			}
 			fmt.Println("")
-			fmt.Println(object.Content)
+			if objectAsString {
+				fmt.Println(object.Content)
+			} else {
+				fmt.Println([]byte(object.Content))
+			}
 			fmt.Println("")
 
 			if object.Type != nil {
@@ -155,6 +160,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			}
 		},
 	}
+	objectCommand.Flags().BoolVarP(&objectAsString, "string", "s", false, "Show object contents as a string")
 	gohatCmd.AddCommand(objectCommand)
 
 	var sameCommand = &cobra.Command{
