@@ -95,3 +95,8 @@ func (h *HeapFile) Goroutines() []*Goroutine {
 	h.parse()
 	return goroutines
 }
+
+func (h *HeapFile) Roots() []*Root {
+	h.parse()
+	return roots
+}

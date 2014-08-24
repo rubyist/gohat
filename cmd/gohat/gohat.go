@@ -250,6 +250,23 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(paramsCommand)
 
+	var rootsCommand = &cobra.Command{
+		Use:   "roots",
+		Short: "dump roots",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			for _, root := range heapFile.Roots() {
+				fmt.Printf("%x %s\n", root.Pointer, root.Description)
+			}
+		},
+	}
+	gohatCmd.AddCommand(rootsCommand)
+
 	var sameCommand = &cobra.Command{
 		Use:   "same",
 		Short: "find objects that are the same in two heap files",

@@ -14,6 +14,7 @@ var dumpParams *DumpParams
 var memProf map[uint64]*Profile
 var allocs []*Alloc
 var goroutines []*Goroutine
+var roots []*Root
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -25,6 +26,7 @@ func (h *HeapFile) parse() {
 	memProf = make(map[uint64]*Profile, 0)
 	allocs = make([]*Alloc, 0)
 	goroutines = make([]*Goroutine, 0)
+	roots = make([]*Root, 0)
 
 	for {
 		// From here on out is a series of records, starting with a uvarint
@@ -42,7 +44,7 @@ func (h *HeapFile) parse() {
 			o := readObject(h.byteReader)
 			objectList[o.Address] = o
 		case 2:
-			readOtherRoot(h.byteReader)
+			roots = append(roots, readOtherRoot(h.byteReader))
 		case 3:
 			t := readType(h.byteReader)
 			typeList[t.Address] = t
@@ -97,9 +99,11 @@ func readObject(r io.ByteReader) *Object {
 }
 
 // (2) other root
-func readOtherRoot(r io.ByteReader) {
-	readString(r)  // textual description of where this root came from
-	readUvarint(r) // root pointer
+func readOtherRoot(r io.ByteReader) *Root {
+	root := &Root{}
+	root.Description = readString(r)
+	root.Pointer = readUvarint(r)
+	return root
 }
 
 // (3) type: uvarint uvarint string bool fieldlist

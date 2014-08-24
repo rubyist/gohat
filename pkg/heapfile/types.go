@@ -121,9 +121,14 @@ type Profile struct {
 	Record    uint64 // record identifier
 	Size      uint64 // size of allocated object
 	NumFrames uint64 // number of stack frames
-	Frames    []*Frame
 	Allocs    uint64 // number of allocations
 	Frees     uint64 // number of frees
+	Frames    []*Frame
+}
+
+type Root struct {
+	Description string // textual description of where this root came from
+	Pointer     uint64 // root pointer
 }
 
 type Type struct {
