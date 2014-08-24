@@ -201,14 +201,30 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			for _, addr := range same {
 				object := heapFile2.Object(int64(addr))
-				fmt.Printf("%016x %d %d %d\n", object.Address, object.Kind, object.Size, len(object.Content))
-				fmt.Println([]byte(object.Content))
-				fmt.Println(object.Content)
+
+				fmt.Printf("%016x %s %d %d\n", object.Address, object.Kind(), object.Size, len(object.Content))
 				if object.Type != nil {
-					fmt.Println("Type: ", object.Type.Name)
+					fmt.Println(object.Type.Name)
+				}
+				fmt.Println("")
+				if objectAsString {
+					fmt.Println(object.Content)
+				} else {
+					fmt.Println([]byte(object.Content))
+				}
+				fmt.Println("")
+
+				if object.Type != nil {
 					fmt.Println("Field List:")
-					for _, field := range object.Type.FieldList {
-						fmt.Printf("%s 0x%016x\n", field.Kind(), field.Offset)
+					var lastOffset uint64
+					for idx, field := range object.Type.FieldList {
+						if idx == len(object.Type.FieldList)-1 {
+							fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:]))
+						} else {
+							lastOffset = object.Type.FieldList[idx].Offset
+							nextOffset := object.Type.FieldList[idx+1].Offset
+							fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:nextOffset]))
+						}
 					}
 				}
 				fmt.Printf("\n\n")

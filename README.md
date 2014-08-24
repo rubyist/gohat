@@ -87,3 +87,23 @@ $ gohat object dumpfile.dump 000000c208490880 --string
 
 TÜRKTRUST Elektronik Sertifika Hizmet Sağlayıcısı
 ```
+
+### Show objects that are the same in two heap files
+```
+$ gohat same dumpfile.dump dumpfile.dump2
+00000002081be140 regular 80 80
+
+[48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+
+
+
+00000002081a40c0 regular 16 16
+errors.errorString
+
+[112 145 14 0 0 0 0 0 29 0 0 0 0 0 0 0]
+
+Field List:
+String 0x0000000000000000  [112 145 14 0 0 0 0 0 29 0 0 0 0 0 0 0]
+...
+
+```
