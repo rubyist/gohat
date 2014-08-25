@@ -183,17 +183,9 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			}
 
 			if object.Type != nil && object.Type.Name == "string" {
-				var len int64
-				var addr int64
-				buf := bytes.NewReader([]byte(object.Content)[8:])
-				binary.Read(buf, binary.LittleEndian, &len)
-				buf = bytes.NewReader([]byte(object.Content)[:8])
-				binary.Read(buf, binary.LittleEndian, &addr)
-				fmt.Println("Length:", len)
-				fmt.Printf("Address: %x\n", addr)
-				str := heapFile.Object(addr)
-				if str != nil {
-					fmt.Printf("Value: %s\n", str.Content)
+				val := derefToString([]byte(object.Content), heapFile)
+				if val != "" {
+					fmt.Printf("Value: %s\n", val)
 				}
 			}
 			fmt.Println("")
@@ -209,11 +201,35 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				var lastOffset uint64
 				for idx, field := range object.Type.FieldList {
 					if idx == len(object.Type.FieldList)-1 {
-						fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:]))
+						data := []byte(object.Content)[lastOffset:]
+						switch field.Kind() {
+						case "Ptr   ":
+							var ptraddr int64
+							buf := bytes.NewReader(data)
+							binary.Read(buf, binary.LittleEndian, &ptraddr)
+							fmt.Printf("%s 0x%016x  %x\n", field.Kind(), field.Offset, ptraddr)
+						case "String":
+							val := derefToString(data, heapFile)
+							fmt.Printf("%s 0x%016x  %s\n", field.Kind(), field.Offset, val)
+						default:
+							fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, data)
+						}
 					} else {
 						lastOffset = object.Type.FieldList[idx].Offset
 						nextOffset := object.Type.FieldList[idx+1].Offset
-						fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:nextOffset]))
+						data := []byte(object.Content)[lastOffset:nextOffset]
+						switch field.Kind() {
+						case "Ptr   ":
+							var ptraddr int64
+							buf := bytes.NewReader(data)
+							binary.Read(buf, binary.LittleEndian, &ptraddr)
+							fmt.Printf("%s 0x%016x  %x\n", field.Kind(), field.Offset, ptraddr)
+						case "String":
+							val := derefToString(data, heapFile)
+							fmt.Printf("%s 0x%016x  %s\n", field.Kind(), field.Offset, val)
+						default:
+							fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, data)
+						}
 					}
 				}
 			}
@@ -433,4 +449,17 @@ func verifyHeapDumpFile(args []string) (*heapfile.HeapFile, error) {
 	}
 	heapFile, err := heapfile.New(args[0])
 	return heapFile, err
+}
+
+func derefToString(b []byte, heapFile *heapfile.HeapFile) string {
+	var len int64
+	var addr int64
+	buf := bytes.NewReader(b[8:])
+	binary.Read(buf, binary.LittleEndian, &len)
+	buf = bytes.NewReader(b[:8])
+	binary.Read(buf, binary.LittleEndian, &addr)
+	if obj := heapFile.Object(addr); obj != nil {
+		return obj.Content
+	}
+	return ""
 }

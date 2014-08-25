@@ -38,15 +38,15 @@ type Field struct {
 func (f *Field) Kind() string {
 	switch f.kind {
 	case 1:
-		return "Ptr"
+		return "Ptr   "
 	case 2:
 		return "String"
 	case 3:
-		return "Slice"
+		return "Slice "
 	case 4:
-		return "Iface"
+		return "Iface "
 	case 5:
-		return "Eface"
+		return "Eface "
 	}
 	return ""
 }
