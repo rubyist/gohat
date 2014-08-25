@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/rubyist/gohat/pkg/heapfile"
 	"github.com/spf13/cobra"
@@ -170,10 +172,29 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 			object := heapFile.Object(addr)
+			if object == nil {
+				fmt.Println("Could not find object")
+				return
+			}
 
 			fmt.Printf("%016x %s %d %d\n", object.Address, object.Kind(), object.Size, len(object.Content))
 			if object.Type != nil {
 				fmt.Println(object.Type.Name)
+			}
+
+			if object.Type != nil && object.Type.Name == "string" {
+				var len int64
+				var addr int64
+				buf := bytes.NewReader([]byte(object.Content)[8:])
+				binary.Read(buf, binary.LittleEndian, &len)
+				buf = bytes.NewReader([]byte(object.Content)[:8])
+				binary.Read(buf, binary.LittleEndian, &addr)
+				fmt.Println("Length:", len)
+				fmt.Printf("Address: %x\n", addr)
+				str := heapFile.Object(addr)
+				if str != nil {
+					fmt.Printf("Value: %s\n", str.Content)
+				}
 			}
 			fmt.Println("")
 			if objectAsString {
