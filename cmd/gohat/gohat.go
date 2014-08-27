@@ -7,6 +7,7 @@ import (
 	"github.com/rubyist/gohat/pkg/heapfile"
 	"github.com/spf13/cobra"
 	"os"
+	"sort"
 	"strconv"
 )
 
@@ -85,6 +86,34 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		},
 	}
 	gohatCmd.AddCommand(goroutinesCommand)
+
+	var histogramCommand = &cobra.Command{
+		Use:   "histogram",
+		Short: "Dump a histogram of object counts by type",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			counts := make(map[string]int, 0)
+			for _, object := range heapFile.Objects() {
+				if object.Type != nil {
+					counts[object.Type.Name] += 1
+				} else {
+					counts["<unknown>"] += 1
+				}
+			}
+
+			histogram := NewHistSorter(counts)
+			histogram.Sort()
+			for i := 0; i < len(histogram.Keys); i++ {
+				fmt.Printf("%d\t%s\n", histogram.Vals[i], histogram.Keys[i])
+			}
+		},
+	}
+	gohatCmd.AddCommand(histogramCommand)
 
 	var memProfCommand = &cobra.Command{
 		Use:   "memprof",
@@ -176,6 +205,9 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				fmt.Println("Could not find object")
 				return
 			}
+
+			os.Stdout.Write([]byte(object.Content))
+			fmt.Println([]byte(object.Content))
 
 			fmt.Printf("%016x %s %d %d\n", object.Address, object.Kind(), object.Size, len(object.Content))
 			if object.Type != nil {
@@ -462,4 +494,29 @@ func derefToString(b []byte, heapFile *heapfile.HeapFile) string {
 		return obj.Content
 	}
 	return ""
+}
+
+type HistSorter struct {
+	Keys []string
+	Vals []int
+}
+
+func NewHistSorter(m map[string]int) *HistSorter {
+	hs := &HistSorter{make([]string, 0, len(m)), make([]int, 0, len(m))}
+	for k, v := range m {
+		hs.Keys = append(hs.Keys, k)
+		hs.Vals = append(hs.Vals, v)
+	}
+	return hs
+}
+
+func (hs *HistSorter) Sort() {
+	sort.Sort(hs)
+}
+
+func (hs *HistSorter) Len() int           { return len(hs.Vals) }
+func (hs *HistSorter) Less(i, j int) bool { return hs.Vals[i] < hs.Vals[j] }
+func (hs *HistSorter) Swap(i, j int) {
+	hs.Vals[i], hs.Vals[j] = hs.Vals[j], hs.Vals[i]
+	hs.Keys[i], hs.Keys[j] = hs.Keys[j], hs.Keys[i]
 }
