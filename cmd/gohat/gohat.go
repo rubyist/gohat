@@ -51,6 +51,46 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(allocsCommand)
 
+	var dataCommand = &cobra.Command{
+		Use:   "data",
+		Short: "Dump the data segment",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			data := heapFile.DataSegment()
+			fmt.Println("Address:", data.Address)
+			for _, field := range data.Fields {
+				fmt.Println(field.Kind(), field.Offset)
+			}
+			fmt.Println(len(data.Content))
+		},
+	}
+	gohatCmd.AddCommand(dataCommand)
+
+	var bssCommand = &cobra.Command{
+		Use:   "bss",
+		Short: "Dump the bss",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			data := heapFile.BSS()
+			fmt.Println("Address:", data.Address)
+			for _, field := range data.Fields {
+				fmt.Println(field.Kind(), field.Offset)
+			}
+			fmt.Println(len(data.Content))
+		},
+	}
+	gohatCmd.AddCommand(bssCommand)
+
 	var goroutinesCommand = &cobra.Command{
 		Use:   "goroutines",
 		Short: "Dump goroutines",

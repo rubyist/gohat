@@ -19,6 +19,13 @@ func (a *Alloc) Profile() *Profile {
 	return nil
 }
 
+// Used for both data segment and bss
+type Segment struct {
+	Address uint64   // address of the start of the data segment
+	Content string   // contents of the data segment
+	Fields  []*Field // kind and offset of pointer-containing fields in the data segment.
+}
+
 type DumpParams struct {
 	BigEndian    bool   // big endian
 	PtrSize      uint64 // pointer size in bytes

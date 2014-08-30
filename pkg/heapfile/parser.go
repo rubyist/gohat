@@ -16,6 +16,8 @@ var allocs []*Alloc
 var goroutines []*Goroutine
 var roots []*Root
 var stackFrames []*StackFrame
+var dataSegment *Segment
+var bss *Segment
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -29,6 +31,8 @@ func (h *HeapFile) parse() {
 	goroutines = make([]*Goroutine, 0)
 	roots = make([]*Root, 0)
 	stackFrames = make([]*StackFrame, 0)
+	dataSegment = &Segment{}
+	bss = &Segment{}
 
 	for {
 		// From here on out is a series of records, starting with a uvarint
@@ -235,16 +239,16 @@ func readQueuedFinalizer(r io.ByteReader) {
 
 // (12) data segment
 func readDataSegment(r io.ByteReader) {
-	readUvarint(r)   // address of the start of the data segment
-	readString(r)    // contents of the data segment
-	readFieldList(r) // kind and offset of pointer-containing fields in the data segment.
+	dataSegment.Address = readUvarint(r)
+	dataSegment.Content = readString(r)
+	dataSegment.Fields = readFieldList(r)
 }
 
 // (13) bss
 func readBSS(r io.ByteReader) {
-	readUvarint(r)   // address of the start of the data segment
-	readString(r)    // contents of the data segment
-	readFieldList(r) // kind and offset of pointer-containing fields in the data segment.
+	bss.Address = readUvarint(r)
+	bss.Content = readString(r)
+	bss.Fields = readFieldList(r)
 }
 
 // (14) defer record

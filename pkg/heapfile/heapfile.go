@@ -36,6 +36,16 @@ func New(file string) (*HeapFile, error) {
 	return &HeapFile{byteReader: byteReader}, nil
 }
 
+func (h *HeapFile) DataSegment() *Segment {
+	h.parse()
+	return dataSegment
+}
+
+func (h *HeapFile) BSS() *Segment {
+	h.parse()
+	return bss
+}
+
 func (h *HeapFile) MemStats() *runtime.MemStats {
 	h.parse()
 	return h.memStats
