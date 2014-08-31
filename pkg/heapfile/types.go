@@ -1,5 +1,9 @@
 package heapfile
 
+import (
+	"fmt"
+)
+
 type Alloc struct {
 	objectAddress uint64 // address of object
 	profileRecord uint64 // alloc/free profile record identifier
@@ -37,22 +41,35 @@ type DumpParams struct {
 	NCPU         uint64 // runtime.ncpu
 }
 
+const (
+	FieldPtr   = 1
+	FieldStr   = 2
+	FieldSlice = 3
+	FieldIface = 4
+	FieldEface = 5
+)
+
 type Field struct {
-	kind   uint64 // kind
-	Offset uint64 // offset
+	Kind    uint64 // kind
+	Offset  uint64 // offset
+	Content string // contents of field
 }
 
-func (f *Field) Kind() string {
-	switch f.kind {
-	case 1:
+func (f *Field) String() string {
+	return fmt.Sprintf("%s %d", f.KindString(), f.Offset)
+}
+
+func (f *Field) KindString() string {
+	switch f.Kind {
+	case FieldPtr:
 		return "Ptr   "
-	case 2:
+	case FieldStr:
 		return "String"
-	case 3:
+	case FieldSlice:
 		return "Slice "
-	case 4:
+	case FieldIface:
 		return "Iface "
-	case 5:
+	case FieldEface:
 		return "Eface "
 	}
 	return ""
@@ -142,7 +159,7 @@ type StackFrame struct {
 	StackPointer      uint64   // stack pointer (lowest address inf rame)
 	DepthInStack      uint64   // depth in stack (0 = top of stack)
 	ChildFramePointer uint64   // stack pointer of child frame (or 0 if none)
-	Contents          string   // contents of stack frame
+	Content           string   // contents of stack frame
 	EntryPC           uint64   // entry pc for function
 	CurrentPC         uint64   // current pc for function
 	ContinuationPC    uint64   // continuation pc for function (where functin may resume, if anywhere)

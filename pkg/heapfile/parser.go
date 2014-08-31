@@ -18,6 +18,7 @@ var roots []*Root
 var stackFrames []*StackFrame
 var dataSegment *Segment
 var bss *Segment
+var itabs map[uint64]bool
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -148,7 +149,7 @@ func readStackFrame(r io.ByteReader) *StackFrame {
 	sf.StackPointer = readUvarint(r)      // stack pointer (lowest address in frame)
 	sf.DepthInStack = readUvarint(r)      // depth in stack (0 = top of stack)
 	sf.ChildFramePointer = readUvarint(r) // stack pointer of child frame (or 0 if none)
-	sf.Contents = readString(r)           // contents of stack frame
+	sf.Content = readString(r)            // contents of stack frame
 	sf.EntryPC = readUvarint(r)           // entry pc for function
 	sf.CurrentPC = readUvarint(r)         // current pc for function
 	sf.ContinuationPC = readUvarint(r)    // continuation pc for function (where function may resume, if anywhere)
@@ -183,8 +184,9 @@ func readFinalizer(r io.ByteReader) {
 
 // (8) itab: uvarint bool
 func readiTab(r io.ByteReader) {
-	readUvarint(r) // Itab address
-	readUvarint(r) // (bool) whether the data field of an Iface with this itab is a pointer
+	a := readUvarint(r) // Itab address
+	p := readUvarint(r) // (bool) whether the data field of an Iface with this itab is a pointer
+	itabs[a] = p == 1
 }
 
 // (9) os thread
@@ -242,6 +244,7 @@ func readDataSegment(r io.ByteReader) {
 	dataSegment.Address = readUvarint(r)
 	dataSegment.Content = readString(r)
 	dataSegment.Fields = readFieldList(r)
+	populateFieldContent(dataSegment.Fields, dataSegment.Content)
 }
 
 // (13) bss
@@ -249,6 +252,7 @@ func readBSS(r io.ByteReader) {
 	bss.Address = readUvarint(r)
 	bss.Content = readString(r)
 	bss.Fields = readFieldList(r)
+	populateFieldContent(bss.Fields, bss.Content)
 }
 
 // (14) defer record
@@ -334,10 +338,26 @@ func readFieldList(r io.ByteReader) []*Field {
 	kind = readUvarint(r)
 	for kind != 0 {
 		offset = readUvarint(r)
-		field := &Field{kind, offset}
+		field := &Field{kind, offset, ""}
 		fields = append(fields, field)
 		kind = readUvarint(r)
 	}
 
 	return fields
+}
+
+func populateFieldContent(fieldList []*Field, content string) {
+	if len(fieldList) == 0 {
+		return
+	}
+	var lastOffset uint64
+	for idx, field := range fieldList {
+		if idx == len(fieldList)-1 {
+			field.Content = content[lastOffset:]
+		} else {
+			lastOffset = fieldList[idx].Offset
+			nextOffset := fieldList[idx+1].Offset
+			field.Content = content[lastOffset:nextOffset]
+		}
+	}
 }
