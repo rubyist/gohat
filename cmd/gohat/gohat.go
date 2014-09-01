@@ -560,7 +560,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Run: func(cmd *cobra.Command, args []string) {
 			heapFile := verifyHeapDumpFile(args)
 
-			trash := garbage(heapFile)
+			trash := heapFile.Garbage()
 			fmt.Printf("Found %d unreachable objects\n", len(trash))
 			for _, object := range trash {
 				typeName := "unknown"
@@ -681,75 +681,6 @@ type uint64arr []uint64
 func (a uint64arr) Len() int           { return len(a) }
 func (a uint64arr) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a uint64arr) Less(i, j int) bool { return a[i] < a[j] }
-
-func garbage(heapFile *heapfile.HeapFile) []*heapfile.Object {
-	objects := heapFile.Objects()
-	seen := make(map[uint64]bool, len(objects))
-
-	for _, object := range objects {
-		seen[object.Address] = false
-	}
-
-	// Mark all the objects the stack frames (roots) point to
-	for _, frame := range heapFile.StackFrames() {
-		for _, object := range frame.Objects() {
-			mark(object, &seen)
-		}
-	}
-
-	// other roots
-	for _, root := range heapFile.Roots() {
-		if object := heapFile.Object(int64(root.Pointer)); object != nil {
-			mark(object, &seen)
-		}
-	}
-
-	// data segment
-	for _, object := range heapFile.DataSegment().Objects() {
-		mark(object, &seen)
-	}
-
-	// bss
-	for _, object := range heapFile.BSS().Objects() {
-		mark(object, &seen)
-	}
-
-	// finalizers
-	for _, f := range heapFile.QueuedFinalizers() {
-		o := heapFile.Object(int64(f.ObjectAddress))
-		if o != nil {
-			mark(o, &seen)
-
-		}
-	}
-	for _, f := range heapFile.Finalizers() {
-		o := heapFile.Object(int64(f.ObjectAddress))
-		if o != nil {
-			mark(o, &seen)
-
-		}
-	}
-
-	trash := make([]*heapfile.Object, 0, len(objects))
-	for addr, visited := range seen {
-		if !visited {
-			trash = append(trash, heapFile.Object(int64(addr)))
-		}
-	}
-
-	return trash
-}
-
-func mark(object *heapfile.Object, seen *map[uint64]bool) {
-	if seen := (*seen)[object.Address]; seen {
-		return
-	}
-
-	(*seen)[object.Address] = true
-	for _, child := range object.Children() {
-		mark(child, seen)
-	}
-}
 
 func dumpObject(heapFile *heapfile.HeapFile, objectAddr uint64, content []byte, depth int) {
 	tabs := depth + 1
