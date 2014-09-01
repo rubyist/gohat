@@ -187,7 +187,16 @@ func (h *HeapFile) OtherRoots() []*Root {
 
 func (h *HeapFile) StackFrames() []*StackFrame {
 	h.parse()
-	return stackFrames
+	frames := make([]*StackFrame, 0, len(stackFrames))
+	for _, f := range stackFrames {
+		frames = append(frames, f)
+	}
+	return frames
+}
+
+func (h *HeapFile) StackFrame(address uint64) *StackFrame {
+	h.parse()
+	return stackFrames[address]
 }
 
 func (h *HeapFile) QueuedFinalizers() []*Finalizer {

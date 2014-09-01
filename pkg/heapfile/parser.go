@@ -15,7 +15,7 @@ var memProf map[uint64]*Profile
 var allocs []*Alloc
 var goroutines []*Goroutine
 var roots []*Root
-var stackFrames []*StackFrame
+var stackFrames map[uint64]*StackFrame
 var dataSegment *Segment
 var bss *Segment
 var finalizers []*Finalizer
@@ -32,7 +32,7 @@ func (h *HeapFile) parse() {
 	allocs = make([]*Alloc, 0)
 	goroutines = make([]*Goroutine, 0)
 	roots = make([]*Root, 0)
-	stackFrames = make([]*StackFrame, 0)
+	stackFrames = make(map[uint64]*StackFrame, 0)
 	dataSegment = &Segment{}
 	bss = &Segment{}
 	finalizers = make([]*Finalizer, 0)
@@ -61,7 +61,8 @@ func (h *HeapFile) parse() {
 		case 4:
 			goroutines = append(goroutines, readGoroutine(h.byteReader))
 		case 5:
-			stackFrames = append(stackFrames, readStackFrame(h.byteReader))
+			stackFrame := readStackFrame(h.byteReader)
+			stackFrames[stackFrame.StackPointer] = stackFrame
 		case 6:
 			dumpParams = readDumpParams(h.byteReader)
 		case 7:

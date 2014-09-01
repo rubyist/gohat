@@ -24,6 +24,7 @@ func (s *gohatServer) Run() {
 	http.HandleFunc("/object", s.objectPage)
 	http.HandleFunc("/roots", s.rootsPage)
 	http.HandleFunc("/garbage", s.garbagePage)
+	http.HandleFunc("/frame", s.framePage)
 
 	log.Printf("Serving %s on %s", s.heapFile.Name, s.address)
 	log.Fatal(http.ListenAndServe(s.address, nil))
@@ -77,6 +78,31 @@ func (s *gohatServer) rootsPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *gohatServer) garbagePage(w http.ResponseWriter, r *http.Request) {
 	render(w, garbageTemplate, s.heapFile)
+	log.Printf("[200] %s", r.URL)
+}
+
+func (s *gohatServer) framePage(w http.ResponseWriter, r *http.Request) {
+	frameId := r.URL.Query().Get("id")
+	addr, err := strconv.ParseUint(frameId, 10, 64)
+	if err != nil {
+		log.Printf("[404] %s", r.URL)
+		http.NotFound(w, r)
+		return
+	}
+
+	frame := s.heapFile.StackFrame(addr)
+	if frame == nil {
+		log.Printf("[404] %s", r.URL)
+		http.NotFound(w, r)
+		return
+	}
+
+	data := map[string]interface{}{
+		"Name":  s.heapFile.Name,
+		"Frame": frame,
+	}
+
+	render(w, frameTemplate, data)
 	log.Printf("[200] %s", r.URL)
 }
 
@@ -203,7 +229,7 @@ var rootsTemplate = `
 
 <h3 id="frames">Stack Frames</h3>
 {{range .StackFrames}}
-<div>{{printf "%010x" .StackPointer}} {{.Name}}</div>
+<div><a href="/frame?id={{.StackPointer}}">{{printf "%010x" .StackPointer}} {{.Name}}</a></div>
 {{end}}
 
 <h3 id="data">Data Segment</h3>
@@ -229,5 +255,14 @@ var rootsTemplate = `
 <h3 id="otherroots">Other Roots</h3>
 {{range .OtherRoots}}
 <div><a href="/object?id={{.Pointer}}">{{printf "0x%x" .Pointer}} {{.Description}}</a></div>
+{{end}}
+`
+
+var frameTemplate = `
+<h2>Stack Frame {{printf "%010x" .Frame.StackPointer}} {{.Frame.Name}}</h2>
+
+<h3>Children</h3>
+{{range .Frame.Objects}}
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
 {{end}}
 `
