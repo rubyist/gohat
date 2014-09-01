@@ -43,18 +43,21 @@ func (s *gohatServer) mainPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *gohatServer) objectsPage(w http.ResponseWriter, r *http.Request) {
 	render(w, objectsTemplate, s.heapFile)
+	log.Printf("[200] %s", r.URL)
 }
 
 func (s *gohatServer) objectPage(w http.ResponseWriter, r *http.Request) {
 	objectId := r.URL.Query().Get("id")
 	addr, err := strconv.ParseInt(objectId, 10, 64)
 	if err != nil {
+		log.Printf("[404] %s", r.URL)
 		http.NotFound(w, r)
 		return
 	}
 
 	object := s.heapFile.Object(addr)
 	if object == nil {
+		log.Printf("[404] %s", r.URL)
 		http.NotFound(w, r)
 		return
 	}
@@ -65,14 +68,17 @@ func (s *gohatServer) objectPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render(w, objectTemplate, data)
+	log.Printf("[200] %s", r.URL)
 }
 
 func (s *gohatServer) reachablePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "reachable")
+	log.Printf("[200] %s", r.URL)
 }
 
 func (s *gohatServer) garbagePage(w http.ResponseWriter, r *http.Request) {
 	render(w, garbageTemplate, s.heapFile)
+	log.Printf("[200] %s", r.URL)
 }
 
 func render(w http.ResponseWriter, templateString string, data interface{}) {
