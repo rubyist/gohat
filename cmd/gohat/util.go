@@ -23,6 +23,7 @@ func hexDump(content string) string {
 			output += fmt.Sprintf("\n%0.7x ", idx+1)
 		}
 	}
+
 	wholeRows := len(contentBytes) / 16
 	lastRow := len(contentBytes) - wholeRows*16
 	filler := 16 - lastRow
@@ -30,7 +31,14 @@ func hexDump(content string) string {
 		output += "   "
 	}
 
-	output += " " + string(contentBytes[lastIdx:])
+	for _, j := range contentBytes[lastIdx:] {
+		if int(j) >= 0x20 && int(j) <= 0x7e {
+			output += string(j)
+		} else {
+			output += "."
+		}
+	}
+
 	return output
 }
 
