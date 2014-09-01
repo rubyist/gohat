@@ -194,32 +194,39 @@ var objectTemplate = `
 
 var rootsTemplate = `
 <h2>Roots</h2>
-<h3>Stack Frames</h3>
+<a href="#frames">Stack Frames</a>
+<a href="#data">Data Segment</a>
+<a href="#bss">BSS</a>
+<a href="#finalizers">Finalizers</a>
+<a href="#qfinalizers">Queued Finalizers</a>
+<a href="#otherroots">Other Roots</a>
+
+<h3 id="frames">Stack Frames</h3>
 {{range .StackFrames}}
 <div>{{printf "%010x" .StackPointer}} {{.Name}}</div>
 {{end}}
 
-<h3>Data Segment</h3>
+<h3 id="data">Data Segment</h3>
 {{range .DataSegmentObjects}}
 <div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
 {{end}}
 
-<h3>BSS</h3>
+<h3 id="bss">BSS</h3>
 {{range .BSSObjects}}
 <div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
 {{end}}
 
-<h3>Finalizers</h3>
+<h3 id="finalizers">Finalizers</h3>
 {{range .FinalizerObjects}}
 <div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
 {{end}}
 
-<h3>Queued Finalizers</h3>
+<h3 id="qfinalizers">Queued Finalizers</h3>
 {{range .QueuedFinalizerObjects}}
 <div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
 {{end}}
 
-<h3>Other Roots</h3>
+<h3 id="otherroots">Other Roots</h3>
 {{range .OtherRoots}}
 <div><a href="/object?id={{.Pointer}}">{{printf "0x%x" .Pointer}} {{.Description}}</a></div>
 {{end}}
