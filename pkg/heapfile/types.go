@@ -162,6 +162,13 @@ func (o *Object) Kind() string {
 	return ""
 }
 
+func (o *Object) Fields() []*Field {
+	if o.Type == nil {
+		return nil
+	}
+	return o.Type.FieldList
+}
+
 func (o *Object)Name() string {
 	if o.Type == nil {
 		return "unknown"

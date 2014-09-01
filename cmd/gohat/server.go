@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type gohatServer struct {
@@ -21,6 +22,7 @@ func newGohatServer(address string, heapFile *heapfile.HeapFile) *gohatServer {
 func (s *gohatServer) Run() {
 	http.HandleFunc("/", s.mainPage)
 	http.HandleFunc("/objects", s.objectsPage)
+	http.HandleFunc("/object", s.objectPage)
 	http.HandleFunc("/reachable", s.reachablePage)
 	http.HandleFunc("/garbage", s.garbagePage)
 
@@ -43,6 +45,28 @@ func (s *gohatServer) objectsPage(w http.ResponseWriter, r *http.Request) {
 	render(w, objectsTemplate, s.heapFile)
 }
 
+func (s *gohatServer) objectPage(w http.ResponseWriter, r *http.Request) {
+	objectId := r.URL.Query().Get("id")
+	addr, err := strconv.ParseInt(objectId, 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	object := s.heapFile.Object(addr)
+	if object == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	data := map[string]interface{}{
+		"Name":   s.heapFile.Name,
+		"Object": object,
+	}
+
+	render(w, objectTemplate, data)
+}
+
 func (s *gohatServer) reachablePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "reachable")
 }
@@ -52,8 +76,12 @@ func (s *gohatServer) garbagePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func render(w http.ResponseWriter, templateString string, data interface{}) {
+	funcMap := template.FuncMap{
+		"hexdump": hexDump,
+	}
+
 	t := template.Must(template.New("main").Parse(bodyTemplate))
-	t.New("body").Parse(templateString)
+	t.New("body").Funcs(funcMap).Parse(templateString)
 	t.Execute(w, data)
 }
 
@@ -127,13 +155,34 @@ var mainTemplate = `
 var objectsTemplate = `
 <h2>Objects</h2>
 {{range .Objects}}
-<div>{{printf "0x%x" .Address}} {{.Name}}</div>
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
 {{end}}
 `
 
 var garbageTemplate = `
 <h2>Unreachable Objects</h2>
 {{range .Garbage}}
-<div>{{printf "0x%x" .Address}} {{.Name}}</div>
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
+{{end}}
+`
+
+var objectTemplate = `
+<h2>{{printf "0x%x" .Object.Address}} {{.Object.Name}}</h2>
+<div>Kind: {{.Object.Kind}}</div>
+<div>Size: {{.Object.Size}}</div>
+
+<h3>Fields</h3>
+{{range .Object.Fields}}
+<div>{{.Kind}} {{printf "0x%.4x" .Offset}}</div>
+{{end}}
+
+<h3>Content</h3>
+<pre>
+{{hexdump .Object.Content}}
+</pre>
+
+<h3>Children</h3>
+{{range .Object.Children}}
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
 {{end}}
 `
