@@ -29,14 +29,14 @@ func (s *gohatServer) Run() {
 }
 
 func (s *gohatServer) mainPage(w http.ResponseWriter, r *http.Request) {
-	h := template.Must(template.New("header").Parse(headerTemplate))
-	h.Execute(w, s.heapFile)
+	if r.URL.Path != "/" {
+		log.Printf("[404] %s", r.URL)
+		http.NotFound(w, r)
+		return
+	}
 
-	t := template.Must(template.New("main").Parse(mainTemplate))
-	t.Execute(w, s.heapFile.DumpParams())
-
-	f := template.Must(template.New("footer").Parse(footerTemplate))
-	f.Execute(w, nil)
+	render(w, mainTemplate, s.heapFile)
+	log.Printf("[200] %s", r.URL)
 }
 
 func (s *gohatServer) objectsPage(w http.ResponseWriter, r *http.Request) {
@@ -51,24 +51,34 @@ func (s *gohatServer) garbagePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "garbage")
 }
 
-var headerTemplate = `<html><head><title>GoHat - {{.Name}}</title></head><body>`
-var footerTemplate = `</body></html>`
+func render(w http.ResponseWriter, templateString string, data interface{}) {
+	t := template.Must(template.New("main").Parse(bodyTemplate))
+	t.New("body").Parse(templateString)
+	t.Execute(w, data)
+}
 
-var mainTemplate = `
+var bodyTemplate = `<html>
+<head><title>GoHat {{.Name}}</title>
+<body>
 <h1>GoHat</h1>
 <a href="/">Main</a>
 <a href="/objects">All Objects</a>
 <a href="/reachable">Reachable Objects</a>
 <a href="/garbage">Garbage Objects</a>
+{{template "body" .}}
+</body>
+</html>
+`
 
+var mainTemplate = `
 <h2>Heap Parameters</h2>
 <table>
-<tr><td>Endianness</td><td>{{if .BigEndian}}Big{{else}}Little{{end}} Endian</td></tr>
-<tr><td>Pointer Size</td><td>{{.PtrSize}}</td></tr>
-<tr><td>Heap Start Address</td><td>{{printf "0x%x" .StartAddress}}</td></tr>
-<tr><td>End Addres</td><td>{{printf "0x%x" .EndAddress}}</td></tr>
-<tr><td>Arch</td><td>{{.Arch}}</td></tr>
-<tr><td>GOEXPERIMENT</td><td>{{.GoExperiment}}</td></tr>
-<tr><td>Num CPU</td><td>{{.NCPU}}</td></tr>
+<tr><td>Endianness</td><td>{{if .DumpParams.BigEndian}}Big{{else}}Little{{end}} Endian</td></tr>
+<tr><td>Pointer Size</td><td>{{.DumpParams.PtrSize}}</td></tr>
+<tr><td>Heap Start Address</td><td>{{printf "0x%x" .DumpParams.StartAddress}}</td></tr>
+<tr><td>End Addres</td><td>{{printf "0x%x" .DumpParams.EndAddress}}</td></tr>
+<tr><td>Arch</td><td>{{.DumpParams.Arch}}</td></tr>
+<tr><td>GOEXPERIMENT</td><td>{{.DumpParams.GoExperiment}}</td></tr>
+<tr><td>Num CPU</td><td>{{.DumpParams.NCPU}}</td></tr>
 </table>
 `
