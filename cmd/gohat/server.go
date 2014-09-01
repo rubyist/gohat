@@ -48,7 +48,7 @@ func (s *gohatServer) reachablePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *gohatServer) garbagePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "garbage")
+	render(w, garbageTemplate, s.heapFile)
 }
 
 func render(w http.ResponseWriter, templateString string, data interface{}) {
@@ -127,6 +127,13 @@ var mainTemplate = `
 var objectsTemplate = `
 <h2>Objects</h2>
 {{range .Objects}}
+<div>{{printf "0x%x" .Address}} {{.Name}}</div>
+{{end}}
+`
+
+var garbageTemplate = `
+<h2>Unreachable Objects</h2>
+{{range .Garbage}}
 <div>{{printf "0x%x" .Address}} {{.Name}}</div>
 {{end}}
 `

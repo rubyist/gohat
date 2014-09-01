@@ -72,6 +72,76 @@ func (h *HeapFile) Object(addr int64) *Object {
 	return nil
 }
 
+func (h *HeapFile) Garbage() []*Object {
+	h.parse()
+	objects := h.Objects()
+	seen := make(map[uint64]bool, len(objects))
+
+	for _, object := range objects {
+		seen[object.Address] = false
+	}
+
+	// Mark all the objects the stack frames (roots) point to
+	for _, frame := range h.StackFrames() {
+		for _, object := range frame.Objects() {
+			mark(object, &seen)
+		}
+	}
+
+	// other roots
+	for _, root := range h.Roots() {
+		if object := h.Object(int64(root.Pointer)); object != nil {
+			mark(object, &seen)
+		}
+	}
+
+	// data segment
+	for _, object := range h.DataSegment().Objects() {
+		mark(object, &seen)
+	}
+
+	// bss
+	for _, object := range h.BSS().Objects() {
+		mark(object, &seen)
+	}
+
+	// finalizers
+	for _, f := range h.QueuedFinalizers() {
+		o := h.Object(int64(f.ObjectAddress))
+		if o != nil {
+			mark(o, &seen)
+
+		}
+	}
+	for _, f := range h.Finalizers() {
+		o := h.Object(int64(f.ObjectAddress))
+		if o != nil {
+			mark(o, &seen)
+
+		}
+	}
+
+	trash := make([]*Object, 0, len(objects))
+	for addr, visited := range seen {
+		if !visited {
+			trash = append(trash, h.Object(int64(addr)))
+		}
+	}
+
+	return trash
+}
+
+func mark(object *Object, seen *map[uint64]bool) {
+	if seen := (*seen)[object.Address]; seen {
+		return
+	}
+
+	(*seen)[object.Address] = true
+	for _, child := range object.Children() {
+		mark(child, seen)
+	}
+}
+
 func (h *HeapFile) Types() []*Type {
 	h.parse()
 	types := make([]*Type, 0, len(typeList))
