@@ -81,4 +81,40 @@ var mainTemplate = `
 <tr><td>GOEXPERIMENT</td><td>{{.DumpParams.GoExperiment}}</td></tr>
 <tr><td>Num CPU</td><td>{{.DumpParams.NCPU}}</td></tr>
 </table>
+
+<h2>MemStats</h2>
+<table>
+<tr><th colspan="2">General Statistics</th></tr>
+<tr><td>Alloc</td><td>{{.MemStats.Alloc}}</td></tr>
+<tr><td>TotalAlloc</td><td>{{.MemStats.TotalAlloc}}</td></tr>
+<tr><td>Sys</td><td>{{.MemStats.Sys}}</td></tr>
+<tr><td>Lookups</td><td>{{.MemStats.Lookups}}</td></tr>
+<tr><td>Mallocs</td><td>{{.MemStats.Mallocs}}</td></tr>
+<tr><td>Frees</td><td>{{.MemStats.Frees}}</td></tr>
+
+<tr><th colspan="2">Main Allocation Heap Statistics</th></tr>
+<tr><td>HeapAlloc</td><td>{{.MemStats.HeapAlloc}}</td></tr>
+<tr><td>HeapSys</td><td>{{.MemStats.HeapSys}}</td></tr>
+<tr><td>HeapIdle</td><td>{{.MemStats.HeapIdle}}</td></tr>
+<tr><td>HeapInuse</td><td>{{.MemStats.HeapInuse}}</td></tr>
+<tr><td>HeapReleased</td><td>{{.MemStats.HeapReleased}}</td></tr>
+<tr><td>HeapObjects</td><td>{{.MemStats.HeapObjects}}</td></tr>
+
+<tr><th colspan="2">Low-level fixed-size structure allocator stats</th></tr>
+<tr><td>StackInuse</td><td>{{.MemStats.StackInuse}}</td></tr>
+<tr><td>StackSys</td><td>{{.MemStats.StackSys}}</td></tr>
+<tr><td>MSpanInuse</td><td>{{.MemStats.MSpanInuse}}</td></tr>
+<tr><td>MSpanSys</td><td>{{.MemStats.MSpanSys}}</td></tr>
+<tr><td>MCacheInuse</td><td>{{.MemStats.MCacheInuse}}</td></tr>
+<tr><td>MCacheSys</td><td>{{.MemStats.MCacheSys}}</td></tr>
+<tr><td>BuckHashSys</td><td>{{.MemStats.BuckHashSys}}</td></tr>
+<tr><td>GCSys</td><td>{{.MemStats.GCSys}}</td></tr>
+<tr><td>OtherSys</td><td>{{.MemStats.OtherSys}}</td></tr>
+
+<tr><th colspan="2">GC Statistics</th></tr>
+<tr><td>NextGC</td><td>{{.MemStats.NextGC}}</td></tr>
+<tr><td>LastGC</td><td>{{.MemStats.LastGC}}</td></tr>
+<tr><td>PauseTotalNs</td><td>{{.MemStats.PauseTotalNs}}</td></tr>
+<tr><td>NumGC</td><td>{{.MemStats.NumGC}}</td></tr>
+</table>
 `
