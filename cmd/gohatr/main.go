@@ -23,7 +23,7 @@ var red = color.RGBA{255, 0, 0, 255}
 
 func main() {
 
-	if len(os.Args) != 1 {
+	if len(os.Args) != 2 {
 		fmt.Println("gohatr <heapfile>")
 		os.Exit(1)
 	}
