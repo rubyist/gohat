@@ -115,3 +115,13 @@ func (h *HeapFile) StackFrames() []*StackFrame {
 	h.parse()
 	return stackFrames
 }
+
+func (h *HeapFile) QueuedFinalizers() []*Finalizer {
+	h.parse()
+	return queuedFinalizers
+}
+
+func (h *HeapFile) Finalizers() []*Finalizer {
+	h.parse()
+	return finalizers
+}

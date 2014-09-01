@@ -18,7 +18,8 @@ var roots []*Root
 var stackFrames []*StackFrame
 var dataSegment *Segment
 var bss *Segment
-var itabs map[uint64]bool
+var finalizers []*Finalizer
+var queuedFinalizers []*Finalizer
 
 func (h *HeapFile) parse() {
 	if h.parsed {
@@ -34,6 +35,8 @@ func (h *HeapFile) parse() {
 	stackFrames = make([]*StackFrame, 0)
 	dataSegment = &Segment{}
 	bss = &Segment{}
+	finalizers = make([]*Finalizer, 0)
+	queuedFinalizers = make([]*Finalizer, 0)
 
 	for {
 		// From here on out is a series of records, starting with a uvarint
@@ -175,18 +178,19 @@ func readDumpParams(r io.ByteReader) *DumpParams {
 
 // (7) registered finalizer
 func readFinalizer(r io.ByteReader) {
-	readUvarint(r) // address of object that has a finalizer
-	readUvarint(r) // pointer to FuncVal describing the finalizer
-	readUvarint(r) // PC of finalizer entry point
-	readUvarint(r) // type of finalizer argument
-	readUvarint(r) // type of object
+	f := &Finalizer{}
+	f.ObjectAddress = readUvarint(r)
+	f.FuncValPtr = readUvarint(r)
+	f.PC = readUvarint(r)
+	f.ArgType = readUvarint(r)
+	f.ObjectType = readUvarint(r)
+	finalizers = append(finalizers, f)
 }
 
 // (8) itab: uvarint bool
 func readiTab(r io.ByteReader) {
-	a := readUvarint(r) // Itab address
-	p := readUvarint(r) // (bool) whether the data field of an Iface with this itab is a pointer
-	itabs[a] = p == 1
+	readUvarint(r) // Itab address
+	readUvarint(r) // (bool) whether the data field of an Iface with this itab is a pointer
 }
 
 // (9) os thread
@@ -232,11 +236,13 @@ func readMemStats(r io.ByteReader) *runtime.MemStats {
 
 // (11) queued finalizer
 func readQueuedFinalizer(r io.ByteReader) {
-	readUvarint(r) // address of object that has a finalizer
-	readUvarint(r) // pointer to FuncVal describing the finalizer
-	readUvarint(r) // PC of finalizer entry point
-	readUvarint(r) // type of finalizer argument
-	readUvarint(r) // type of object
+	f := &Finalizer{}
+	f.ObjectAddress = readUvarint(r)
+	f.FuncValPtr = readUvarint(r)
+	f.PC = readUvarint(r)
+	f.ArgType = readUvarint(r)
+	f.ObjectType = readUvarint(r)
+	queuedFinalizers = append(queuedFinalizers, f)
 }
 
 // (12) data segment

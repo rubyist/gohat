@@ -1,6 +1,8 @@
 package heapfile
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 )
 
@@ -28,6 +30,25 @@ type Segment struct {
 	Address uint64   // address of the start of the data segment
 	Content string   // contents of the data segment
 	Fields  []*Field // kind and offset of pointer-containing fields in the data segment.
+}
+
+// Returns objects the stack frame points to that are on the heap
+func (s *Segment) Objects() []*Object {
+	params := dumpParams
+	var addr uint64
+	var lastIndex uint64 = 0
+	contentLength := uint64(len(s.Content))
+	children := make([]*Object, 0)
+	for i := params.PtrSize; i < contentLength+params.PtrSize; i += params.PtrSize {
+		buf := bytes.NewReader([]byte(s.Content[lastIndex:i]))
+		binary.Read(buf, binary.LittleEndian, &addr)
+		lastIndex = i
+
+		if obj, ok := objectList[addr]; ok {
+			children = append(children, obj)
+		}
+	}
+	return children
 }
 
 type DumpParams struct {
@@ -141,6 +162,41 @@ func (o *Object) Kind() string {
 	return ""
 }
 
+// Returns objects the object points to that are on the heap
+func (o *Object) Children() []*Object {
+	var lastIndex uint64 = 0
+	var addr uint64
+	var size uint64 = uint64(o.Size)
+	children := make([]*Object, 0)
+
+	if o.Size > 2252800 {
+		return children
+	}
+
+	for i := dumpParams.PtrSize; i < size+dumpParams.PtrSize; i += dumpParams.PtrSize {
+		buf := bytes.NewReader([]byte(o.Content[lastIndex:i]))
+		binary.Read(buf, binary.LittleEndian, &addr)
+		lastIndex = i
+
+		if addr == o.Address {
+			continue // Don't add ourselves
+		}
+
+		if child, ok := objectList[addr]; ok { // object is on the heap
+			children = append(children, child)
+		}
+	}
+	return children
+}
+
+type Finalizer struct {
+	ObjectAddress uint64 // address of object that has a finalizer
+	FuncValPtr    uint64 // pointer to FuncVal describing the finalizer
+	PC            uint64 // PC of finalizer entry point
+	ArgType       uint64 // type of finalizer argument
+	ObjectType    uint64 // type of object
+}
+
 type Profile struct {
 	Record    uint64 // record identifier
 	Size      uint64 // size of allocated object
@@ -165,6 +221,27 @@ type StackFrame struct {
 	ContinuationPC    uint64   // continuation pc for function (where functin may resume, if anywhere)
 	Name              string   // function name
 	FieldList         []*Field // list of kind and offset of pointer-containing fields in this frame
+}
+
+// Returns objects the stack frame points to that are on the heap
+func (s *StackFrame) Objects() []*Object {
+	params := dumpParams
+	var addr uint64
+	var lastIndex uint64 = 0
+
+	contentLength := uint64(len(s.Content))
+	children := make([]*Object, 0)
+
+	for i := params.PtrSize; i < contentLength+params.PtrSize; i += params.PtrSize {
+		buf := bytes.NewReader([]byte(s.Content[lastIndex:i]))
+		binary.Read(buf, binary.LittleEndian, &addr)
+		lastIndex = i
+
+		if obj, ok := objectList[addr]; ok {
+			children = append(children, obj)
+		}
+	}
+	return children
 }
 
 type Type struct {

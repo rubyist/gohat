@@ -261,33 +261,30 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			}
 
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
+
+			// Check objects
 			for _, object := range heapFile.Objects() {
-				if object.Type == nil {
-					continue
-				}
-				var lastOffset uint64
-				var ptraddr int64
-				for idx, _ := range object.Type.FieldList {
-					// if field.Kind() != "Ptr   " && field.Kind() != "String" {
-					// 	continue
-					// }
-					if idx == len(object.Type.FieldList)-1 {
-						data := []byte(object.Content)[lastOffset:]
-						buf := bytes.NewReader(data)
-						binary.Read(buf, binary.LittleEndian, &ptraddr)
-						if addr == ptraddr {
-							fmt.Printf("Matched object: %x\n", object.Address)
-						}
-					} else {
-						lastOffset = object.Type.FieldList[idx].Offset
-						nextOffset := object.Type.FieldList[idx+1].Offset
-						data := []byte(object.Content)[lastOffset:nextOffset]
-						buf := bytes.NewReader(data)
-						binary.Read(buf, binary.LittleEndian, &ptraddr)
-						if addr == ptraddr {
-							fmt.Printf("Matched object: %x\n", object.Address)
-						}
+				for _, child := range object.Children() {
+					if uint64(addr) == child.Address {
+						fmt.Printf("Found in object %x\n", object.Address)
+						return
 					}
+				}
+			}
+
+			// Check data segment
+			for _, object := range heapFile.DataSegment().Objects() {
+				if uint64(addr) == object.Address {
+					fmt.Printf("Found object in data segment\n")
+					return
+				}
+			}
+
+			// Check bss
+			for _, object := range heapFile.BSS().Objects() {
+				if uint64(addr) == object.Address {
+					fmt.Printf("Found object in bss\n")
+					return
 				}
 			}
 		},
@@ -382,6 +379,11 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 						}
 					}
 				}
+			}
+
+			fmt.Println("Children")
+			for _, child := range object.Children() {
+				fmt.Printf("%x\n", child.Address)
 			}
 		},
 	}
@@ -669,17 +671,40 @@ div {
 			}
 
 			for _, frame := range heapFile.StackFrames() {
-				fmt.Println(frame.Name)
-				fmt.Println("Field List:")
-				for _, field := range frame.FieldList {
-					fmt.Printf("\t%s 0x%016x\n", field.KindString(), field.Offset)
+				fmt.Printf("%x %s\n", frame.StackPointer, frame.Name)
+				for _, object := range frame.Objects() {
+					fmt.Printf("\t%x\n", object.Address)
+					for _, child := range object.Children() {
+						fmt.Printf("\t\t%x\n", child.Address)
+					}
 				}
-				fmt.Println([]byte(frame.Content))
-				fmt.Println("")
 			}
 		},
 	}
 	gohatCmd.AddCommand(stackFramesCommand)
+
+	var garbageCommand = &cobra.Command{
+		Use:   "garbage",
+		Short: "Dump unreachable objects",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile, err := verifyHeapDumpFile(args)
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			trash := garbage(heapFile)
+			fmt.Printf("Found %d unreachable objects\n", len(trash))
+			for _, object := range trash {
+				typeName := "unknown"
+				if object.Type != nil {
+					typeName = object.Type.Name
+				}
+				fmt.Printf("%x %s\n", object.Address, typeName)
+			}
+		},
+	}
+	gohatCmd.AddCommand(garbageCommand)
 
 	var typeCommand = &cobra.Command{
 		Use:   "type",
@@ -779,3 +804,103 @@ type uint64arr []uint64
 func (a uint64arr) Len() int           { return len(a) }
 func (a uint64arr) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a uint64arr) Less(i, j int) bool { return a[i] < a[j] }
+
+func garbage(heapFile *heapfile.HeapFile) []*heapfile.Object {
+	objects := heapFile.Objects()
+	seen := make(map[uint64]bool, len(objects))
+
+	for _, object := range objects {
+		seen[object.Address] = false
+	}
+
+	// Mark all the objects the stack frames (roots) point to
+	for _, frame := range heapFile.StackFrames() {
+		for _, object := range frame.Objects() {
+			mark(object, &seen)
+		}
+	}
+
+	// other roots
+	for _, root := range heapFile.Roots() {
+		if object := heapFile.Object(int64(root.Pointer)); object != nil {
+			mark(object, &seen)
+		}
+	}
+
+	// data segment
+	for _, object := range heapFile.DataSegment().Objects() {
+		mark(object, &seen)
+	}
+
+	// bss
+	for _, object := range heapFile.BSS().Objects() {
+		mark(object, &seen)
+	}
+
+	// finalizers
+	for _, f := range heapFile.QueuedFinalizers() {
+		o := heapFile.Object(int64(f.ObjectAddress))
+		if o != nil {
+			mark(o, &seen)
+
+		}
+	}
+	for _, f := range heapFile.Finalizers() {
+		o := heapFile.Object(int64(f.ObjectAddress))
+		if o != nil {
+			mark(o, &seen)
+
+		}
+	}
+
+	trash := make([]*heapfile.Object, 0, len(objects))
+	for addr, visited := range seen {
+		if !visited {
+			trash = append(trash, heapFile.Object(int64(addr)))
+		}
+	}
+
+	return trash
+}
+
+func mark(object *heapfile.Object, seen *map[uint64]bool) {
+	if seen := (*seen)[object.Address]; seen {
+		return
+	}
+
+	(*seen)[object.Address] = true
+	for _, child := range object.Children() {
+		mark(child, seen)
+	}
+}
+
+func dumpObject(heapFile *heapfile.HeapFile, objectAddr uint64, content []byte, depth int) {
+	tabs := depth + 1
+	params := heapFile.DumpParams()
+	var addr uint64
+	var lastIndex uint64 = 0
+	contentLength := uint64(len(content))
+	for i := params.PtrSize; i < contentLength+params.PtrSize; i += params.PtrSize {
+		buf := bytes.NewReader([]byte(content[lastIndex:i]))
+		binary.Read(buf, binary.LittleEndian, &addr)
+
+		if addr >= params.StartAddress && addr <= params.EndAddress {
+			if obj := heapFile.Object(int64(addr)); obj != nil {
+				if addr == objectAddr {
+					continue
+				}
+				for i := 0; i < tabs; i++ {
+					fmt.Print(" ")
+				}
+				objectType := "<unknown>"
+				if obj.Type != nil {
+					objectType = obj.Type.Name
+				}
+				fmt.Printf("%x %s\n", addr, objectType)
+				dumpObject(heapFile, obj.Address, []byte(obj.Content), tabs)
+			}
+		}
+
+		lastIndex = i
+	}
+}
