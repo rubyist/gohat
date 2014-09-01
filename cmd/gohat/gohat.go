@@ -25,11 +25,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "allocs",
 		Short: "Dump the alloc stack trace samples",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			allocs := heapFile.Allocs()
 			fmt.Println(len(allocs), "alloc samples")
@@ -56,11 +52,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "data",
 		Short: "Dump the data segment",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			data := heapFile.DataSegment()
 			if dataBinary {
@@ -87,11 +79,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "bss",
 		Short: "Dump the bss",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			data := heapFile.BSS()
 
@@ -117,11 +105,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "goroutines",
 		Short: "Dump goroutines",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			for _, g := range heapFile.Goroutines() {
 				fmt.Printf("Goroutine %d\n", g.Id)
@@ -153,11 +137,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "histogram",
 		Short: "Dump a histogram of object counts by type",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			counts := make(map[string]int, 0)
 			for _, object := range heapFile.Objects() {
@@ -181,11 +161,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "memprof",
 		Short: "Dump the alloc/free profile records",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			memProf := heapFile.MemProf()
 			for _, record := range memProf {
@@ -202,11 +178,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "memstats",
 		Short: "Dump the memstats",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			memstats := heapFile.MemStats()
 			fmt.Println("General statistics")
@@ -249,11 +221,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "contains",
 		Short: "Find objects that point to an address",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			if len(args) != 2 {
 				fmt.Println("contains <heap file> <address>")
@@ -297,11 +265,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "object",
 		Short: "Dump the contents of an object",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			if len(args) != 2 {
 				fmt.Println("object <heap file> <address>")
@@ -395,11 +359,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "objects",
 		Short: "Dump a list of objects",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			objects := heapFile.Objects()
 			for _, object := range objects {
@@ -417,11 +377,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "params",
 		Short: "Show the heap parameters",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			dumpParams := heapFile.DumpParams()
 			if dumpParams.BigEndian {
@@ -444,11 +400,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 		Use:   "roots",
 		Short: "dump roots",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			for _, root := range heapFile.Roots() {
 				fmt.Printf("%x %s\n", root.Pointer, root.Description)
@@ -457,84 +409,11 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(rootsCommand)
 
-	var renderCommand = &cobra.Command{
-		Use:   "render",
-		Short: "render the heap in html",
-		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
-
-			objects := heapFile.Objects()
-			addresses := make(uint64arr, 0, len(objects))
-			for _, obj := range objects {
-				addresses = append(addresses, obj.Address)
-			}
-			sort.Sort(addresses)
-
-			fmt.Println(`<html>
-<head>
-<style type="text/css">
-div {
-  background-color: green;
-  height: 9px;
-  border: 1px solid red;
-  float: left;
-}
-.left {
-		border-right: 0px;
-}
-.mid {
-	border-left: 0px;
-	border-right: 0px;
-}
-.right {
-	border-left: 0px;
-}
-</style>
-</head>
-<body>`)
-
-			for _, addr := range addresses {
-				object := heapFile.Object(int64(addr))
-				size := object.Size
-				typeName := "unknown"
-				if object.Type != nil {
-					typeName = object.Type.Name
-				}
-				if size <= 1024 { // 1280 pixels
-					width := ((size / 8) * 10) - 1
-					fmt.Println(fmt.Sprintf(`<div style="width:%dpx" title="%s"></div>`, width, typeName))
-				} else {
-					left := size - 1024
-					width := ((1024 / 8) * 10) - 1
-					fmt.Println(fmt.Sprintf(`<div style="width:%dpx" class="left" title="%s"></div>`, width, typeName))
-					for left >= 1024 {
-						width := ((1024 / 8) * 10) - 1
-						fmt.Println(fmt.Sprintf(`<div style="width:%dpx" class="mid" title="%s"></div>`, width, typeName))
-						left -= 1024
-					}
-					width = ((left / 8) * 10) - 1
-					fmt.Println(fmt.Sprintf(`<div style="width:%dpx" class="right" title="%s"></div>`, width, typeName))
-				}
-			}
-
-			fmt.Println(`</body></html>`)
-		},
-	}
-	gohatCmd.AddCommand(renderCommand)
-
 	var fragmentCommand = &cobra.Command{
 		Use:   "fragment",
 		Short: "show unused address locations",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			totalFrag := uint64(0)
 
@@ -588,11 +467,7 @@ div {
 		Use:   "same",
 		Short: "find objects that are the same in two heap files",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile1, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile1 := verifyHeapDumpFile(args)
 
 			if len(args) != 2 {
 				fmt.Println("same <heap file> <heap file>")
@@ -664,11 +539,7 @@ div {
 		Use:   "stackframes",
 		Short: "Dump the stack frames",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			for _, frame := range heapFile.StackFrames() {
 				fmt.Printf("%x %s\n", frame.StackPointer, frame.Name)
@@ -687,11 +558,7 @@ div {
 		Use:   "garbage",
 		Short: "Dump unreachable objects",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			trash := garbage(heapFile)
 			fmt.Printf("Found %d unreachable objects\n", len(trash))
@@ -706,15 +573,24 @@ div {
 	}
 	gohatCmd.AddCommand(garbageCommand)
 
+	var serverAddress string
+	var serverCommand = &cobra.Command{
+		Use:   "server",
+		Short: "run the web interface",
+		Run: func(cmd *cobra.Command, args []string) {
+			heapFile := verifyHeapDumpFile(args)
+			s := newGohatServer(serverAddress, heapFile)
+			s.Run()
+		},
+	}
+	gohatCmd.AddCommand(serverCommand)
+	serverCommand.Flags().StringVarP(&serverAddress, "addr", "a", ":5150", "Address to listen on (default :5150)")
+
 	var typeCommand = &cobra.Command{
 		Use:   "type",
 		Short: "Dump information about a type",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			if len(args) != 2 {
 				fmt.Println("type <heap file> <address>")
@@ -736,11 +612,7 @@ div {
 		Use:   "types",
 		Short: "Dump all the types found in the heap",
 		Run: func(cmd *cobra.Command, args []string) {
-			heapFile, err := verifyHeapDumpFile(args)
-			if err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
-			}
+			heapFile := verifyHeapDumpFile(args)
 
 			types := heapFile.Types()
 			for _, t := range types {
@@ -753,12 +625,17 @@ div {
 	gohatCmd.Execute()
 }
 
-func verifyHeapDumpFile(args []string) (*heapfile.HeapFile, error) {
+func verifyHeapDumpFile(args []string) *heapfile.HeapFile {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("heap file required")
+		fmt.Println("heap file required")
+		os.Exit(1)
 	}
 	heapFile, err := heapfile.New(args[0])
-	return heapFile, err
+	if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+	return heapFile
 }
 
 func derefToString(b []byte, heapFile *heapfile.HeapFile) string {

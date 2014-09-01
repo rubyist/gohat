@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"path/filepath"
 	"runtime"
 )
 
@@ -14,6 +15,7 @@ var (
 var dumpHeader = "go1.3 heap dump\n"
 
 type HeapFile struct {
+	Name       string
 	memStats   *runtime.MemStats
 	byteReader *bufio.Reader
 	parsed     bool
@@ -33,7 +35,9 @@ func New(file string) (*HeapFile, error) {
 
 	byteReader := bufio.NewReader(dumpFile)
 
-	return &HeapFile{byteReader: byteReader}, nil
+	name := filepath.Base(file)
+
+	return &HeapFile{Name: name, byteReader: byteReader}, nil
 }
 
 func (h *HeapFile) DataSegment() *Segment {
