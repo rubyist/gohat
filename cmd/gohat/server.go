@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/rubyist/gohat/pkg/heapfile"
 	"html/template"
 	"log"
@@ -23,7 +22,7 @@ func (s *gohatServer) Run() {
 	http.HandleFunc("/", s.mainPage)
 	http.HandleFunc("/objects", s.objectsPage)
 	http.HandleFunc("/object", s.objectPage)
-	http.HandleFunc("/reachable", s.reachablePage)
+	http.HandleFunc("/roots", s.rootsPage)
 	http.HandleFunc("/garbage", s.garbagePage)
 
 	log.Printf("Serving %s on %s", s.heapFile.Name, s.address)
@@ -48,7 +47,7 @@ func (s *gohatServer) objectsPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *gohatServer) objectPage(w http.ResponseWriter, r *http.Request) {
 	objectId := r.URL.Query().Get("id")
-	addr, err := strconv.ParseInt(objectId, 10, 64)
+	addr, err := strconv.ParseUint(objectId, 10, 64)
 	if err != nil {
 		log.Printf("[404] %s", r.URL)
 		http.NotFound(w, r)
@@ -71,8 +70,8 @@ func (s *gohatServer) objectPage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[200] %s", r.URL)
 }
 
-func (s *gohatServer) reachablePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "reachable")
+func (s *gohatServer) rootsPage(w http.ResponseWriter, r *http.Request) {
+	render(w, rootsTemplate, s.heapFile)
 	log.Printf("[200] %s", r.URL)
 }
 
@@ -102,7 +101,7 @@ var bodyTemplate = `<html>
 <h1>GoHat</h1>
 <a href="/">Main</a>
 <a href="/objects">All Objects</a>
-<a href="/reachable">Reachable Objects</a>
+<a href="/roots">Roots</a>
 <a href="/garbage">Garbage Objects</a>
 {{template "body" .}}
 </body>
@@ -190,5 +189,38 @@ var objectTemplate = `
 <h3>Children</h3>
 {{range .Object.Children}}
 <div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
+{{end}}
+`
+
+var rootsTemplate = `
+<h2>Roots</h2>
+<h3>Stack Frames</h3>
+{{range .StackFrames}}
+<div>{{printf "%010x" .StackPointer}} {{.Name}}</div>
+{{end}}
+
+<h3>Data Segment</h3>
+{{range .DataSegmentObjects}}
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
+{{end}}
+
+<h3>BSS</h3>
+{{range .BSSObjects}}
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
+{{end}}
+
+<h3>Finalizers</h3>
+{{range .FinalizerObjects}}
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
+{{end}}
+
+<h3>Queued Finalizers</h3>
+{{range .QueuedFinalizerObjects}}
+<div><a href="/object?id={{.Address}}">{{printf "0x%x" .Address}} {{.Name}}</a></div>
+{{end}}
+
+<h3>Other Roots</h3>
+{{range .OtherRoots}}
+<div><a href="/object?id={{.Pointer}}">{{printf "0x%x" .Pointer}} {{.Description}}</a></div>
 {{end}}
 `

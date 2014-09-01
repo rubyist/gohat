@@ -206,11 +206,11 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				os.Exit(1)
 			}
 
-			addr, _ := strconv.ParseInt(args[1], 16, 64)
+			addr, _ := strconv.ParseUint(args[1], 16, 64)
 
 			// Check data segment
 			for _, object := range heapFile.DataSegment().Objects() {
-				if uint64(addr) == object.Address {
+				if addr == object.Address {
 					fmt.Printf("Found object in data segment\n")
 					return
 				}
@@ -249,7 +249,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				os.Exit(1)
 			}
 
-			addr, _ := strconv.ParseInt(args[1], 16, 64)
+			addr, _ := strconv.ParseUint(args[1], 16, 64)
 			object := heapFile.Object(addr)
 			if object == nil {
 				fmt.Println("Could not find object")
@@ -366,11 +366,11 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 	var rootsCommand = &cobra.Command{
 		Use:   "roots",
-		Short: "dump roots",
+		Short: "dump other roots",
 		Run: func(cmd *cobra.Command, args []string) {
 			heapFile := verifyHeapDumpFile(args)
 
-			for _, root := range heapFile.Roots() {
+			for _, root := range heapFile.OtherRoots() {
 				fmt.Printf("%x %s\n", root.Pointer, root.Description)
 			}
 		},
@@ -394,12 +394,12 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			firstAddr := addresses[0]
 			lastAddr := addresses[len(addresses)-1]
-			lastObject := heapFile.Object(int64(lastAddr))
+			lastObject := heapFile.Object(lastAddr)
 
 			for i := 0; i < len(addresses)-1; i++ {
 				addr := addresses[i]
 				nextAddr := addresses[i+1]
-				object := heapFile.Object(int64(addr))
+				object := heapFile.Object(addr)
 				size := object.Size
 				endAddr := addr + uint64(size)
 
@@ -450,7 +450,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			same := make([]*sameObject, 0, len(heapObjects1))
 
 			for _, obj := range heapObjects1 {
-				if cmp := heapFile2.Object(int64(obj.Address)); cmp != nil {
+				if cmp := heapFile2.Object(obj.Address); cmp != nil {
 					if cmp.TypeAddress == obj.TypeAddress &&
 						cmp.Kind() == obj.Kind() &&
 						cmp.Size == obj.Size {
@@ -532,7 +532,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				os.Exit(1)
 			}
 
-			addr, _ := strconv.ParseInt(args[1], 16, 64)
+			addr, _ := strconv.ParseUint(args[1], 16, 64)
 
 			t := heapFile.Type(addr)
 			fmt.Printf("%x %d %s\n", t.Address, len(t.FieldList), t.Name)
@@ -580,7 +580,7 @@ func derefToString(b []byte, heapFile *heapfile.HeapFile) string {
 	binary.Read(buf, binary.LittleEndian, &len)
 	buf = bytes.NewReader(b[:8])
 	binary.Read(buf, binary.LittleEndian, &addr)
-	if obj := heapFile.Object(addr); obj != nil {
+	if obj := heapFile.Object(uint64(addr)); obj != nil {
 		return obj.Content
 	}
 	return ""

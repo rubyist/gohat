@@ -64,7 +64,7 @@ func (h *HeapFile) Objects() []*Object {
 	return objects
 }
 
-func (h *HeapFile) Object(addr int64) *Object {
+func (h *HeapFile) Object(addr uint64) *Object {
 	h.parse()
 	if object, ok := objectList[uint64(addr)]; ok {
 		return object
@@ -89,8 +89,8 @@ func (h *HeapFile) Garbage() []*Object {
 	}
 
 	// other roots
-	for _, root := range h.Roots() {
-		if object := h.Object(int64(root.Pointer)); object != nil {
+	for _, root := range h.OtherRoots() {
+		if object := h.Object(root.Pointer); object != nil {
 			mark(object, &seen)
 		}
 	}
@@ -107,14 +107,14 @@ func (h *HeapFile) Garbage() []*Object {
 
 	// finalizers
 	for _, f := range h.QueuedFinalizers() {
-		o := h.Object(int64(f.ObjectAddress))
+		o := h.Object(f.ObjectAddress)
 		if o != nil {
 			mark(o, &seen)
 
 		}
 	}
 	for _, f := range h.Finalizers() {
-		o := h.Object(int64(f.ObjectAddress))
+		o := h.Object(f.ObjectAddress)
 		if o != nil {
 			mark(o, &seen)
 
@@ -124,7 +124,7 @@ func (h *HeapFile) Garbage() []*Object {
 	trash := make([]*Object, 0, len(objects))
 	for addr, visited := range seen {
 		if !visited {
-			trash = append(trash, h.Object(int64(addr)))
+			trash = append(trash, h.Object(addr))
 		}
 	}
 
@@ -151,9 +151,9 @@ func (h *HeapFile) Types() []*Type {
 	return types
 }
 
-func (h *HeapFile) Type(addr int64) *Type {
+func (h *HeapFile) Type(addr uint64) *Type {
 	h.parse()
-	return typeList[uint64(addr)]
+	return typeList[addr]
 }
 
 func (h *HeapFile) DumpParams() *DumpParams {
@@ -180,7 +180,7 @@ func (h *HeapFile) Goroutines() []*Goroutine {
 	return goroutines
 }
 
-func (h *HeapFile) Roots() []*Root {
+func (h *HeapFile) OtherRoots() []*Root {
 	h.parse()
 	return roots
 }
@@ -198,4 +198,36 @@ func (h *HeapFile) QueuedFinalizers() []*Finalizer {
 func (h *HeapFile) Finalizers() []*Finalizer {
 	h.parse()
 	return finalizers
+}
+
+func (h *HeapFile) DataSegmentObjects() []*Object {
+	h.parse()
+	return h.DataSegment().Objects()
+}
+
+func (h *HeapFile) BSSObjects() []*Object {
+	h.parse()
+	return h.BSS().Objects()
+}
+
+func (h *HeapFile) FinalizerObjects() []*Object {
+	h.parse()
+	objects := make([]*Object, 0, len(finalizers))
+	for _, finalizer := range finalizers {
+		if object := h.Object(finalizer.ObjectAddress); object != nil {
+			objects = append(objects, object)
+		}
+	}
+	return objects
+}
+
+func (h *HeapFile) QueuedFinalizerObjects() []*Object {
+	h.parse()
+	objects := make([]*Object, 0, len(queuedFinalizers))
+	for _, finalizer := range queuedFinalizers {
+		if object := h.Object(finalizer.ObjectAddress); object != nil {
+			objects = append(objects, object)
+		}
+	}
+	return objects
 }

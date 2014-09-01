@@ -169,7 +169,7 @@ func (o *Object) Fields() []*Field {
 	return o.Type.FieldList
 }
 
-func (o *Object)Name() string {
+func (o *Object) Name() string {
 	if o.Type == nil {
 		return "unknown"
 	}
@@ -226,7 +226,7 @@ type Root struct {
 }
 
 type StackFrame struct {
-	StackPointer      uint64   // stack pointer (lowest address inf rame)
+	StackPointer      uint64   // stack pointer (lowest address in frame)
 	DepthInStack      uint64   // depth in stack (0 = top of stack)
 	ChildFramePointer uint64   // stack pointer of child frame (or 0 if none)
 	Content           string   // contents of stack frame
