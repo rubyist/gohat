@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/rubyist/gohat/pkg/heapfile"
 )
 
 func hexDump(content string) string {
@@ -31,4 +32,12 @@ func hexDump(content string) string {
 
 	output += " " + string(contentBytes[lastIdx:])
 	return output
+}
+
+func displayObjectShort(o *heapfile.Object) {
+	typeName := "unknown"
+	if o.Type != nil {
+		typeName = o.Type.Name
+	}
+	fmt.Printf("%x %s\n", o.Address, typeName)
 }

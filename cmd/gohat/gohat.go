@@ -47,34 +47,22 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(allocsCommand)
 
-	var dataBinary bool
 	var dataCommand = &cobra.Command{
 		Use:   "data",
-		Short: "Dump the data segment",
+		Short: "Dump objects found in the data segment",
 		Run: func(cmd *cobra.Command, args []string) {
 			heapFile := verifyHeapDumpFile(args)
 
 			data := heapFile.DataSegment()
-			if dataBinary {
-				os.Stdout.Write([]byte(data.Content))
-				return
+			objects := data.Objects()
+			fmt.Printf("Found %d objects in the data segment\n", len(objects))
+			for _, object := range objects {
+				displayObjectShort(object)
 			}
-
-			fmt.Println("Address:", data.Address)
-			for _, field := range data.Fields {
-				if field.Kind == heapfile.FieldStr {
-					fmt.Printf("%s %d %s\n", field.KindString(), field.Offset, field.Content)
-				} else {
-					fmt.Printf("%s %d %v\n", field.KindString(), field.Offset, []byte(field.Content))
-				}
-			}
-			fmt.Println(len(data.Content))
 		},
 	}
-	dataCommand.Flags().BoolVarP(&dataBinary, "binary", "b", false, "Dump data contents as binary")
 	gohatCmd.AddCommand(dataCommand)
 
-	var bssBinary bool
 	var bssCommand = &cobra.Command{
 		Use:   "bss",
 		Short: "Dump the bss",
@@ -82,23 +70,13 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			heapFile := verifyHeapDumpFile(args)
 
 			data := heapFile.BSS()
-
-			if bssBinary {
-				os.Stdout.Write([]byte(data.Content))
-				return
-			}
-
-			fmt.Println("Address:", data.Address)
-			for _, field := range data.Fields {
-				if field.Kind == heapfile.FieldStr {
-					fmt.Printf("%s %d %s\n", field.KindString(), field.Offset, field.Content)
-				} else {
-					fmt.Printf("%s %d %v\n", field.KindString(), field.Offset, []byte(field.Content))
-				}
+			objects := data.Objects()
+			fmt.Printf("Found %d objects in the data segment\n", len(objects))
+			for _, object := range objects {
+				displayObjectShort(object)
 			}
 		},
 	}
-	bssCommand.Flags().BoolVarP(&bssBinary, "binary", "b", false, "Dump data contents as binary")
 	gohatCmd.AddCommand(bssCommand)
 
 	var goroutinesCommand = &cobra.Command{
@@ -230,16 +208,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 
-			// Check objects
-			for _, object := range heapFile.Objects() {
-				for _, child := range object.Children() {
-					if uint64(addr) == child.Address {
-						fmt.Printf("Found in object %x\n", object.Address)
-						return
-					}
-				}
-			}
-
 			// Check data segment
 			for _, object := range heapFile.DataSegment().Objects() {
 				if uint64(addr) == object.Address {
@@ -255,11 +223,20 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 					return
 				}
 			}
+
+			// Check objects
+			for _, object := range heapFile.Objects() {
+				for _, child := range object.Children() {
+					if uint64(addr) == child.Address {
+						fmt.Printf("Found in object %x\n", object.Address)
+						return
+					}
+				}
+			}
 		},
 	}
 	gohatCmd.AddCommand(containsCommand)
 
-	var objectAsString bool
 	var objectBinary bool
 	var objectCommand = &cobra.Command{
 		Use:   "object",
@@ -284,10 +261,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				return
 			}
 
-			// os.Stdout.Write([]byte(object.Content))
-			// fmt.Println([]byte(object.Content))
-
-			fmt.Printf("%016x %s %d %d\n", object.Address, object.Kind(), object.Size, len(object.Content))
+			fmt.Printf("%x %s %d %d\n", object.Address, object.Kind(), object.Size, len(object.Content))
 			if object.Type != nil {
 				fmt.Println(object.Type.Name)
 			}
@@ -299,13 +273,8 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				}
 			}
 			fmt.Println("")
-			if objectAsString {
-				fmt.Printf("%v\n", []byte(object.Content))
-			}
-			// } else {
-			// 	fmt.Println([]byte(object.Content))
-			// }
-			fmt.Println("")
+			fmt.Print(hexDump(object.Content))
+			fmt.Print("\n\n")
 
 			if object.Type != nil {
 				fmt.Println("Field List:")
@@ -318,12 +287,12 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 							var ptraddr int64
 							buf := bytes.NewReader(data)
 							binary.Read(buf, binary.LittleEndian, &ptraddr)
-							fmt.Printf("%s 0x%016x  %x\n", field.KindString(), field.Offset, ptraddr)
+							fmt.Printf("%s 0x%04x  %x\n", field.KindString(), field.Offset, ptraddr)
 						case "String":
 							// val := derefToString(data, heapFile)
-							fmt.Printf("%s 0x%016x  \n", field.KindString(), field.Offset)
+							fmt.Printf("%s 0x%04x  \n", field.KindString(), field.Offset)
 						default:
-							fmt.Printf("%s 0x%016x  \n", field.KindString(), field.Offset)
+							fmt.Printf("%s 0x%04x  \n", field.KindString(), field.Offset)
 						}
 					} else {
 						lastOffset = object.Type.FieldList[idx].Offset
@@ -334,24 +303,23 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 							var ptraddr int64
 							buf := bytes.NewReader(data)
 							binary.Read(buf, binary.LittleEndian, &ptraddr)
-							fmt.Printf("%s 0x%016x  %x\n", field.KindString(), field.Offset, ptraddr)
+							fmt.Printf("%s 0x%04x  %x\n", field.KindString(), field.Offset, ptraddr)
 						case heapfile.FieldStr:
 							// val := derefToString(data, heapFile)
-							fmt.Printf("%s 0x%016x  \n", field.KindString(), field.Offset)
+							fmt.Printf("%s 0x%04x  \n", field.KindString(), field.Offset)
 						default:
-							fmt.Printf("%s 0x%016x  \n", field.KindString(), field.Offset)
+							fmt.Printf("%s 0x%04x  \n", field.KindString(), field.Offset)
 						}
 					}
 				}
 			}
 
-			fmt.Println("Children")
+			fmt.Println("\nChildren")
 			for _, child := range object.Children() {
-				fmt.Printf("%x\n", child.Address)
+				displayObjectShort(child)
 			}
 		},
 	}
-	objectCommand.Flags().BoolVarP(&objectAsString, "string", "s", false, "Show object contents as a string")
 	objectCommand.Flags().BoolVarP(&objectBinary, "binary", "b", false, "Dump the binary contents of the object")
 	gohatCmd.AddCommand(objectCommand)
 
@@ -367,7 +335,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				if object.Type != nil {
 					typeName = object.Type.Name
 				}
-				fmt.Printf("%016x,%s,%s,%d\n", object.Address, typeName, object.Kind(), object.Size)
+				fmt.Printf("%x,%s,%s,%d\n", object.Address, typeName, object.Kind(), object.Size)
 			}
 		},
 	}
@@ -427,7 +395,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			firstAddr := addresses[0]
 			lastAddr := addresses[len(addresses)-1]
 			lastObject := heapFile.Object(int64(lastAddr))
-			// lastAddr += uint64(heapFile.Object(int64(lastAddr)).Size)
 
 			for i := 0; i < len(addresses)-1; i++ {
 				addr := addresses[i]
@@ -436,7 +403,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				size := object.Size
 				endAddr := addr + uint64(size)
 
-				// fmt.Printf("%x %x %d (%x)\n", addr, nextAddr, size, endAddr)
 				if endAddr != nextAddr {
 					fragAmount := nextAddr - endAddr
 					totalFrag += fragAmount
@@ -447,7 +413,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			// May be junk on the end
 			params := heapFile.DumpParams()
 			endAddr := lastAddr + uint64(lastObject.Size)
-			// fmt.Printf("last addr: %x, endAddr: %x\n", lastAddr, endAddr)
 			endCruft := params.EndAddress - endAddr
 			if endCruft > 0 {
 				totalFrag += endCruft
@@ -488,7 +453,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				if cmp := heapFile2.Object(int64(obj.Address)); cmp != nil {
 					if cmp.TypeAddress == obj.TypeAddress &&
 						cmp.Kind() == obj.Kind() &&
-						// cmp.Content == obj.Content &&
 						cmp.Size == obj.Size {
 						same = append(same, &sameObject{obj, cmp.Content == obj.Content})
 					}
@@ -503,33 +467,6 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 				}
 
 				fmt.Printf("%x,%s,%d,%v\n", object.Address, typeName, object.Size, same.SameContent)
-				//
-				// fmt.Printf("%016x %s %d %d\n", object.Address, object.Kind(), object.Size, len(object.Content))
-				// if object.Type != nil {
-				// 	fmt.Println(object.Type.Name)
-				// }
-				// fmt.Println("")
-				// if objectAsString {
-				// 	fmt.Println(object.Content)
-				// } else {
-				// 	fmt.Println([]byte(object.Content))
-				// }
-				// fmt.Println("")
-				//
-				// if object.Type != nil {
-				// 	fmt.Println("Field List:")
-				// 	var lastOffset uint64
-				// 	for idx, field := range object.Type.FieldList {
-				// 		if idx == len(object.Type.FieldList)-1 {
-				// 			fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:]))
-				// 		} else {
-				// 			lastOffset = object.Type.FieldList[idx].Offset
-				// 			nextOffset := object.Type.FieldList[idx+1].Offset
-				// 			fmt.Printf("%s 0x%016x  %v\n", field.Kind(), field.Offset, []byte(object.Content[lastOffset:nextOffset]))
-				// 		}
-				// 	}
-				// }
-				// fmt.Printf("\n\n")
 			}
 		},
 	}
@@ -544,9 +481,11 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			for _, frame := range heapFile.StackFrames() {
 				fmt.Printf("%x %s\n", frame.StackPointer, frame.Name)
 				for _, object := range frame.Objects() {
-					fmt.Printf("\t%x\n", object.Address)
+					fmt.Print("\t")
+					displayObjectShort(object)
 					for _, child := range object.Children() {
-						fmt.Printf("\t\t%x\n", child.Address)
+						fmt.Print("\t\t")
+						displayObjectShort(child)
 					}
 				}
 			}
@@ -563,11 +502,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			trash := heapFile.Garbage()
 			fmt.Printf("Found %d unreachable objects\n", len(trash))
 			for _, object := range trash {
-				typeName := "unknown"
-				if object.Type != nil {
-					typeName = object.Type.Name
-				}
-				fmt.Printf("%x %s\n", object.Address, typeName)
+				displayObjectShort(object)
 			}
 		},
 	}
@@ -600,9 +535,9 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			addr, _ := strconv.ParseInt(args[1], 16, 64)
 
 			t := heapFile.Type(addr)
-			fmt.Printf("%016x %d %s\n", t.Address, len(t.FieldList), t.Name)
+			fmt.Printf("%x %d %s\n", t.Address, len(t.FieldList), t.Name)
 			for _, field := range t.FieldList {
-				fmt.Println(field)
+				fmt.Printf("%s 0x%0.4x\n", field.KindString(), field.Offset)
 			}
 		},
 	}
@@ -616,7 +551,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			types := heapFile.Types()
 			for _, t := range types {
-				fmt.Printf("%016x %d %s\n", t.Address, len(t.FieldList), t.Name)
+				fmt.Printf("%x %d %s\n", t.Address, len(t.FieldList), t.Name)
 			}
 		},
 	}
@@ -681,34 +616,3 @@ type uint64arr []uint64
 func (a uint64arr) Len() int           { return len(a) }
 func (a uint64arr) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a uint64arr) Less(i, j int) bool { return a[i] < a[j] }
-
-func dumpObject(heapFile *heapfile.HeapFile, objectAddr uint64, content []byte, depth int) {
-	tabs := depth + 1
-	params := heapFile.DumpParams()
-	var addr uint64
-	var lastIndex uint64 = 0
-	contentLength := uint64(len(content))
-	for i := params.PtrSize; i < contentLength+params.PtrSize; i += params.PtrSize {
-		buf := bytes.NewReader([]byte(content[lastIndex:i]))
-		binary.Read(buf, binary.LittleEndian, &addr)
-
-		if addr >= params.StartAddress && addr <= params.EndAddress {
-			if obj := heapFile.Object(int64(addr)); obj != nil {
-				if addr == objectAddr {
-					continue
-				}
-				for i := 0; i < tabs; i++ {
-					fmt.Print(" ")
-				}
-				objectType := "<unknown>"
-				if obj.Type != nil {
-					objectType = obj.Type.Name
-				}
-				fmt.Printf("%x %s\n", addr, objectType)
-				dumpObject(heapFile, obj.Address, []byte(obj.Content), tabs)
-			}
-		}
-
-		lastIndex = i
-	}
-}
