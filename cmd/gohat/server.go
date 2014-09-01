@@ -56,6 +56,7 @@ var footerTemplate = `</body></html>`
 
 var mainTemplate = `
 <h1>GoHat</h1>
+<a href="/">Main</a>
 <a href="/objects">All Objects</a>
 <a href="/reachable">Reachable Objects</a>
 <a href="/garbage">Garbage Objects</a>
@@ -64,8 +65,8 @@ var mainTemplate = `
 <table>
 <tr><td>Endianness</td><td>{{if .BigEndian}}Big{{else}}Little{{end}} Endian</td></tr>
 <tr><td>Pointer Size</td><td>{{.PtrSize}}</td></tr>
-<tr><td>Heap Start Address</td><td>{{.StartAddress}}</td></tr>
-<tr><td>End Addres</td><td>{{.EndAddress}}</td></tr>
+<tr><td>Heap Start Address</td><td>{{printf "0x%x" .StartAddress}}</td></tr>
+<tr><td>End Addres</td><td>{{printf "0x%x" .EndAddress}}</td></tr>
 <tr><td>Arch</td><td>{{.Arch}}</td></tr>
 <tr><td>GOEXPERIMENT</td><td>{{.GoExperiment}}</td></tr>
 <tr><td>Num CPU</td><td>{{.NCPU}}</td></tr>
