@@ -162,6 +162,13 @@ func (o *Object) Kind() string {
 	return ""
 }
 
+func (o *Object)Name() string {
+	if o.Type == nil {
+		return "unknown"
+	}
+	return o.Type.Name
+}
+
 // Returns objects the object points to that are on the heap
 func (o *Object) Children() []*Object {
 	var lastIndex uint64 = 0

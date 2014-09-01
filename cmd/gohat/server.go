@@ -40,7 +40,7 @@ func (s *gohatServer) mainPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *gohatServer) objectsPage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "objects")
+	render(w, objectsTemplate, s.heapFile)
 }
 
 func (s *gohatServer) reachablePage(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +58,12 @@ func render(w http.ResponseWriter, templateString string, data interface{}) {
 }
 
 var bodyTemplate = `<html>
-<head><title>GoHat {{.Name}}</title>
+<head>
+	<title>GoHat {{.Name}}</title>
+	<style type="text/css">
+		body { font-family: monospace; }
+	</style>
+</head>
 <body>
 <h1>GoHat</h1>
 <a href="/">Main</a>
@@ -117,4 +122,11 @@ var mainTemplate = `
 <tr><td>PauseTotalNs</td><td>{{.MemStats.PauseTotalNs}}</td></tr>
 <tr><td>NumGC</td><td>{{.MemStats.NumGC}}</td></tr>
 </table>
+`
+
+var objectsTemplate = `
+<h2>Objects</h2>
+{{range .Objects}}
+<div>{{printf "0x%x" .Address}} {{.Name}}</div>
+{{end}}
 `
