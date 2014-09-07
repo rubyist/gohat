@@ -111,6 +111,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(goroutinesCommand)
 
+	var histBySize bool
 	var histogramCommand = &cobra.Command{
 		Use:   "histogram",
 		Short: "Dump a histogram of object counts by type",
@@ -120,9 +121,17 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			counts := make(map[string]int, 0)
 			for _, object := range heapFile.Objects() {
 				if object.Type != nil {
-					counts[object.Type.Name] += 1
+					if histBySize {
+						counts[object.Type.Name] += object.Size
+					} else {
+						counts[object.Type.Name] += 1
+					}
 				} else {
-					counts["<unknown>"] += 1
+					if histBySize {
+						counts["<unknown>"] += object.Size
+					} else {
+						counts["<unknown>"] += 1
+					}
 				}
 			}
 
@@ -133,6 +142,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 			}
 		},
 	}
+	histogramCommand.Flags().BoolVarP(&histBySize, "size", "s", false, "Histogram by total object size")
 	gohatCmd.AddCommand(histogramCommand)
 
 	var memProfCommand = &cobra.Command{
