@@ -482,6 +482,7 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 	}
 	gohatCmd.AddCommand(sameCommand)
 
+	var frameChildren bool
 	var stackFramesCommand = &cobra.Command{
 		Use:   "stackframes",
 		Short: "Dump the stack frames",
@@ -490,17 +491,20 @@ Complete documentation is available at http://github.com/rubyist/gohat`,
 
 			for _, frame := range heapFile.StackFrames() {
 				fmt.Printf("%x %s\n", frame.StackPointer, frame.Name)
-				for _, object := range frame.Objects() {
-					fmt.Print("\t")
-					displayObjectShort(object)
-					for _, child := range object.Children() {
-						fmt.Print("\t\t")
-						displayObjectShort(child)
+				if frameChildren {
+					for _, object := range frame.Objects() {
+						fmt.Print("\t")
+						displayObjectShort(object)
+						for _, child := range object.Children() {
+							fmt.Print("\t\t")
+							displayObjectShort(child)
+						}
 					}
 				}
 			}
 		},
 	}
+	stackFramesCommand.Flags().BoolVarP(&frameChildren, "children", "c", false, "Show the children of the stack frames")
 	gohatCmd.AddCommand(stackFramesCommand)
 
 	var garbageCommand = &cobra.Command{
