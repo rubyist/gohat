@@ -203,20 +203,14 @@ func readUvarint(r io.ByteReader) (uint64, error) {
 	return v, nil
 }
 
-func readString(r io.ByteReader) (string, error) {
+func readString(r *offsetReader) (string, error) {
 	l, err := readUvarint(r)
 	if err != nil {
 		return "", err
 	}
-	var by []byte // TODO gross
-	for i := 0; i < int(l); i++ {
-		b, err := r.ReadByte()
-		if err != nil {
-			return "", err
-		}
-		by = append(by, b)
-	}
-	return string(by), nil
+	by := make([]byte, l)
+	_, err = r.Read(by)
+	return string(by), err
 }
 
 func readBool(r io.ByteReader) (bool, error) {
