@@ -61,46 +61,12 @@ func (p *HeapParser) Tag() uint64 {
 }
 
 func (p *HeapParser) Read() (interface{}, error) {
-	var o interface{}
-
-	switch p.curTag {
-	case tagObject:
-		o = new(Object)
-	case tagOtherRoot: // Not used
-	case tagType:
-		o = new(Type)
-	case tagGoroutine:
-		o = new(Goroutine)
-	case tagStackFrame:
-		o = new(StackFrame)
-	case tagParams:
-		o = new(DumpParams)
-	case tagFinalizer:
-		o = new(Finalizer)
-	case tagItab:
-		o = new(ITab)
-	case tagOSThread:
-		o = new(Thread)
-	case tagMemStats:
-		o = new(MemStats)
-	case tagQueuedFinalizer:
-		o = &Finalizer{Kind: QueuedFinalizer}
-	case tagData:
-		o = &Segment{Kind: DataSegment}
-	case tagBSS:
-		o = &Segment{Kind: BSS}
-	case tagDefer:
-		o = new(DeferRecord)
-	case tagPanic:
-		o = new(PanicRecord)
-	case tagMemProf:
-		o = new(MemProf)
-	case tagAllocSample:
-		o = new(AllocSample)
-	default:
-		return nil, nil
+	f, ok := initializers[int(p.curTag)]
+	if !ok {
+		return nil, errInvalidTag
 	}
 
+	o := f()
 	err := p.readInto(o)
 	return o, err
 }
@@ -297,4 +263,25 @@ const (
 	tagPanic           = 15
 	tagMemProf         = 16
 	tagAllocSample     = 17
+
+	dumpHeader = "go1.7 heap dump\n"
 )
+
+var initializers = map[int]func() interface{}{
+	tagObject:          func() interface{} { return new(Object) },
+	tagType:            func() interface{} { return new(Type) },
+	tagGoroutine:       func() interface{} { return new(Goroutine) },
+	tagStackFrame:      func() interface{} { return new(StackFrame) },
+	tagParams:          func() interface{} { return new(DumpParams) },
+	tagFinalizer:       func() interface{} { return new(Finalizer) },
+	tagItab:            func() interface{} { return new(ITab) },
+	tagOSThread:        func() interface{} { return new(Thread) },
+	tagMemStats:        func() interface{} { return new(MemStats) },
+	tagQueuedFinalizer: func() interface{} { return &Finalizer{Kind: QueuedFinalizer} },
+	tagData:            func() interface{} { return &Segment{Kind: DataSegment} },
+	tagBSS:             func() interface{} { return &Segment{Kind: BSS} },
+	tagDefer:           func() interface{} { return new(DeferRecord) },
+	tagPanic:           func() interface{} { return new(PanicRecord) },
+	tagMemProf:         func() interface{} { return new(MemProf) },
+	tagAllocSample:     func() interface{} { return new(AllocSample) },
+}
