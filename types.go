@@ -1,19 +1,5 @@
 package gohat
 
-type SegmentKind int
-
-const (
-	DataSegment SegmentKind = iota
-	BSS                     = iota
-)
-
-type FinalizerKind int
-
-const (
-	QueuedFinalizer  FinalizerKind = iota
-	RegularFinalizer               = iota
-)
-
 // These are the core types that are in the dump file. They are listed
 // in the order WriteHeapDump writes them.
 
@@ -115,7 +101,6 @@ type Segment struct {
 	Addr     uint64
 	Contents string
 	Fields   []Field
-	Kind     SegmentKind `heap:"ignore"`
 }
 
 // Finalizer is a finalizer
@@ -125,7 +110,6 @@ type Finalizer struct {
 	PC         uint64
 	ArgType    uint64
 	ObjectType uint64
-	Kind       FinalizerKind `heap:"ignore"`
 }
 
 // MemStats is memstats

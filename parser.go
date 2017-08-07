@@ -13,14 +13,16 @@ var (
 	errInvalidTag  = errors.New("invalid tag")
 )
 
-type HeapParser struct {
+// Parser is a go heap dump file parser.
+type Parser struct {
 	file   string
 	f      *offsetReader
 	err    error
 	curTag uint64
 }
 
-func NewParser(file string) (*HeapParser, error) {
+// NewParser creates a new parser using the heap dump in the given file.
+func NewParser(file string) (*Parser, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
@@ -38,13 +40,14 @@ func NewParser(file string) (*HeapParser, error) {
 		return nil, errInvalidHeapFile
 	}
 
-	return &HeapParser{
+	return &Parser{
 		file: file,
 		f:    b,
 	}, nil
 }
 
-func (p *HeapParser) More() bool {
+// More returns true if there are more items remaining in the dump
+func (p *Parser) More() bool {
 	tag, err := p.readNextTag()
 	if err != nil {
 		p.err = err
@@ -56,11 +59,13 @@ func (p *HeapParser) More() bool {
 	return tag != tagEOF
 }
 
-func (p *HeapParser) Tag() uint64 {
+// Tag returns the tag for the next item in the dump
+func (p *Parser) Tag() uint64 {
 	return p.curTag
 }
 
-func (p *HeapParser) Read() (interface{}, error) {
+// Read returns the next item in the dump
+func (p *Parser) Read() (interface{}, error) {
 	f, ok := initializers[int(p.curTag)]
 	if !ok {
 		return nil, errInvalidTag
@@ -71,11 +76,12 @@ func (p *HeapParser) Read() (interface{}, error) {
 	return o, err
 }
 
-func (p *HeapParser) Error() error {
+// Error returns any errors that happened during parsing
+func (p *Parser) Error() error {
 	return p.err
 }
 
-func (p *HeapParser) readNextTag() (uint64, error) {
+func (p *Parser) readNextTag() (uint64, error) {
 	t, err := readUvarint(p.f)
 	if err != nil {
 		return 0, err
@@ -86,7 +92,7 @@ func (p *HeapParser) readNextTag() (uint64, error) {
 	return t, nil
 }
 
-func (p *HeapParser) readInto(c interface{}) error {
+func (p *Parser) readInto(c interface{}) error {
 	// Verify that type of s matches current tag
 	if reflect.ValueOf(c).Kind() != reflect.Ptr {
 		return errInvalidType
@@ -169,6 +175,21 @@ func readUvarint(r io.ByteReader) (uint64, error) {
 	return v, nil
 }
 
+func (p *Parser) readFrameInfo(n uint64) ([]FrameInfo, error) {
+	frames := make([]FrameInfo, 0)
+
+	for i := uint64(0); i < n; i++ {
+		f := FrameInfo{}
+		if err := p.readInto(&f); err != nil {
+			return nil, err
+		}
+
+		frames = append(frames, f)
+	}
+
+	return frames, nil
+}
+
 func readString(r *offsetReader) (string, error) {
 	l, err := readUvarint(r)
 	if err != nil {
@@ -209,21 +230,6 @@ func readFields(r io.ByteReader) ([]Field, error) {
 	}
 
 	return fields, nil
-}
-
-func (p *HeapParser) readFrameInfo(n uint64) ([]FrameInfo, error) {
-	frames := make([]FrameInfo, 0)
-
-	for i := uint64(0); i < n; i++ {
-		f := FrameInfo{}
-		if err := p.readInto(&f); err != nil {
-			return nil, err
-		}
-
-		frames = append(frames, f)
-	}
-
-	return frames, nil
 }
 
 func readPauseNs(r io.ByteReader) ([256]uint64, error) {
@@ -277,9 +283,9 @@ var initializers = map[int]func() interface{}{
 	tagItab:            func() interface{} { return new(ITab) },
 	tagOSThread:        func() interface{} { return new(Thread) },
 	tagMemStats:        func() interface{} { return new(MemStats) },
-	tagQueuedFinalizer: func() interface{} { return &Finalizer{Kind: QueuedFinalizer} },
-	tagData:            func() interface{} { return &Segment{Kind: DataSegment} },
-	tagBSS:             func() interface{} { return &Segment{Kind: BSS} },
+	tagQueuedFinalizer: func() interface{} { return new(Finalizer) },
+	tagData:            func() interface{} { return new(Segment) },
+	tagBSS:             func() interface{} { return new(Segment) },
 	tagDefer:           func() interface{} { return new(DeferRecord) },
 	tagPanic:           func() interface{} { return new(PanicRecord) },
 	tagMemProf:         func() interface{} { return new(MemProf) },
